@@ -61,14 +61,11 @@ contract ConverterRamp is Ownable {
         uint256 bought = convertSafe(converter, fromToken, rcn, optimalSell);
 
         // Pay loan
-        require(
-            executeOptimalPay({
-                params: loanParams,
-                oracleData: oracleData,
-                rcnToPay: bought
-            }),
-            'Error paying the loan'
-        );
+
+        DebtEngine debtEngine = DebtEngine(address(uint256(loanParams[I_DEBT_ENGINE])));
+        require(rcn.approve(address(debtEngine), bought), "Error on payment approve");
+        debtEngine.pay(loanParams[I_REQUEST_ID], bought, address(uint256(loanParams[I_PAY_FROM])), oracleData);
+        require(rcn.approve(address(debtEngine), 0), "Error removing the payment approve");
 
         require(
             rebuyAndReturn({
@@ -299,7 +296,7 @@ contract ConverterRamp is Ownable {
         address to
     ) internal returns (bool) {
         DebtEngine debtEngine = DebtEngine(address(uint256(params[I_DEBT_ENGINE])));
-        // TODO: ANALIZAR ESTO! debtEngine.safeTransferFrom(, to, uint256(params[I_REQUEST_ID]));
+        debtEngine.transferFrom(address(this), to, uint256(params[I_REQUEST_ID]));
         return true;
     }
 

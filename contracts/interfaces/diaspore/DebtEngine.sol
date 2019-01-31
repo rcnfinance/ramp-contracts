@@ -10,6 +10,5 @@ interface DebtEngine {
         bytes calldata _oracleData
     ) external returns (uint256 paid, uint256 paidToken);
 
-    function safeTransferFrom(address _from, address _to, uint256 _assetId) external;
-
+    function transferFrom(address _from, address _to, uint256 _assetId) external;
 }
