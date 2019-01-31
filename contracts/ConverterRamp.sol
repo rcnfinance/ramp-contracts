@@ -252,35 +252,6 @@ contract ConverterRamp is Ownable {
         return boughtAmount;
     }
 
-    function executeOptimalPay(
-        bytes32[5] memory params,
-        bytes memory oracleData,
-        uint256 rcnToPay
-    ) internal returns (bool) {
-        LoanManager loanManager = LoanManager(address(uint256(params[I_LOAN_MANAGER])));
-        bytes32 id = params[I_REQUEST_ID];
-        RateOracle oracle = RateOracle(loanManager.getOracle(uint256(id)));
-
-        uint256 toPay;
-
-        if (address(oracle) == address(0)) {
-            toPay = rcnToPay;
-        } else {
-            (uint256 _tokens, uint256 _equivalent) = oracle.readSample(oracleData);
-            require(_equivalent != 0, 'Oracle provided invalid rate');
-            toPay = rcnToPay.mul(_equivalent) / _tokens;
-        }
-
-        Token rcn = loanManager.token();
-        require(rcn.approve(address(loanManager), rcnToPay), 'Error on payment approve');
-
-        DebtEngine debtEngine = DebtEngine(address(uint256(params[I_DEBT_ENGINE])));
-        debtEngine.pay(id, toPay, address(uint256(params[I_PAY_FROM])), oracleData); //VERIFICAR ALGO ?
-        require(rcn.approve(address(loanManager), 0), 'Error removing the payment approve');
-
-        return true;
-    }
-
     function executeLend(
         bytes32[4] memory params,
         bytes memory oracleData,
