@@ -1,4 +1,4 @@
-pragma solidity 0.5.0;
+pragma solidity 0.5.10;
 
 import './interfaces/Cosigner.sol';
 import './interfaces/diaspore/DebtEngine.sol';
@@ -6,8 +6,8 @@ import './interfaces/diaspore/LoanManager.sol';
 import './interfaces/token/Token.sol';
 import './interfaces/token/TokenConverter.sol';
 import './interfaces/RateOracle.sol';
-import './math/SafeMath.sol';
-import './ownership/Ownable.sol';
+import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
+import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
 
 
 contract ConverterRamp is Ownable {
