@@ -1,6 +1,6 @@
 {
   "name": "RAMPS-Diaspore",
-  "version": "",
+  "version": "1.0.0",
   "description": "",
   "files": [
     "build",
@@ -14,7 +14,7 @@
     "lint:sol:fix": "solium -d . --fix",
     "lint": "npm run lint:js && npm run lint:sol",
     "lint:fix": "npm run lint:js:fix && npm run lint:sol:fix",
-    "console": "truffle console",
+    "console": "truffle console"
   },
   "repository": {
     "type": "git",
@@ -26,8 +26,7 @@
     "smart",
     "contracts"
   ],
-  "author": "",
-  "license": "",
+  "author": "jpgonzalezra",
   "bugs": {
     "url": "https://github.com/ripio/ramps-diaspore"
   },
