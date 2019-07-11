@@ -1,10 +1,9 @@
 pragma solidity 0.5.10;
 
-interface IUniswapFactory {
-    function getExchange(address token) external view returns (address);
-}
+import "./../interfaces/uniswap/UniswapExchangeInterface.sol";
 
-contract UniswapFactoryMock is IUniswapFactory {
+
+contract UniswapFactoryMock is UniswapExchangeInterface {
     address exchange;
 
     constructor(address _exchange) public {
