@@ -38,12 +38,12 @@ contract UniswapProxy is TokenConverter, Ownable {
         Token from,
         Token to, 
         uint256 srcQty
-    ) external view returns (uint256) {
+    ) external returns (uint256) {
         return getExpectedRate(IERC20(address(from)), IERC20(address(to)), srcQty);
         // return (srcQty * getExpectedRate(address(from), address(to), srcQty)) / 10 ** 18; // TODO: ?
     }
 
-    function getExpectedRate(IERC20 from, IERC20 to, uint srcQty) internal returns (uint) {
+    function getExpectedRate(IERC20 from, IERC20 to, uint srcQty) view internal returns (uint) {
         if (from == ETH_TOKEN_ADDRESS) {
             address uniswapTokenAddress = uniswapFactory.getExchange(address(to));
             return wdiv(UniswapExchangeInterface(uniswapTokenAddress).getEthToTokenInputPrice(srcQty), srcQty);

@@ -16,6 +16,6 @@ interface TokenConverter {
         Token _fromToken,
         Token _toToken,
         uint256 _fromAmount
-    ) external view returns (uint256 amount);
+    ) external returns (uint256 amount);
 
 }
