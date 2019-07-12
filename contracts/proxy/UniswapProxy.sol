@@ -1,5 +1,7 @@
 import "./../interfaces/token/TokenConverter.sol";
 import "./../interfaces/uniswap/Uniswap.sol";
+import "./../safe/SafeERC20.sol";
+import "./../safe/SafeExchange.sol";
 import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
 import 'openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
 import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
@@ -10,56 +12,60 @@ pragma solidity 0.5.10;
 contract UniswapProxy is TokenConverter, Ownable {
     
     using SafeMath for uint256;
+    using SafeExchange for UniswapExchangeInterface;
+    using SafeERC20 for IERC20;
+
+    event Swap(address indexed sender, IERC20 _token, IERC20 _outToken, uint _amount);
+    event WithdrawTokens(address _token, address _to, uint256 _amount);
+    event WithdrawEth(address _to, uint256 _amount);
+    event SetUniswap(address _uniswapFactory);
 
     uint public constant WAD = 10 ** 18;
     IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
-    UniswapFactoryInterface uniswapFactory;
+    UniswapFactoryInterface factory;
 
-    event Swap(address indexed sender, IERC20 srcToken, IERC20 destToken, uint amount);
-
-    event WithdrawTokens(address _token, address _to, uint256 _amount);
-    event WithdrawEth(address _to, uint256 _amount);
-    event SetUniswap(address _uniswap);
-
-    constructor (address _uniswap) public {
-        uniswapFactory = UniswapFactoryInterface(_uniswap);
-        emit SetUniswap(_uniswap);
+    constructor (address _uniswapFactory) public {
+        factory = UniswapFactoryInterface(_uniswapFactory);
+        emit SetUniswap(_uniswapFactory);
     }
 
-    function setUniswap(address _uniswap) external onlyOwner returns (bool) {
-        uniswapFactory = UniswapFactoryInterface(_uniswap);
-        emit SetUniswap(_uniswap);
+    function setUniswapFactory(address _uniswapFactory) external onlyOwner returns (bool) {
+        factory = UniswapFactoryInterface(_uniswapFactory);
+        emit SetUniswap(_uniswapFactory);
         return true;
     }
     
-    function getReturn(
-        Token from,
-        Token to, 
-        uint256 srcQty
-    ) external returns (uint256) {
-        return getExpectedRate(IERC20(address(from)), IERC20(address(to)), srcQty);
-        // return (srcQty * getExpectedRate(address(from), address(to), srcQty)) / 10 ** 18; // TODO: ?
+    function price(
+        address _token,
+        address _outToken,
+        uint256 _amount
+    ) public view returns (uint256, uint256, UniswapExchangeInterface) {
+        UniswapExchangeInterface inExchange =
+          UniswapExchangeInterface(factory.getExchange(_token));
+        UniswapExchangeInterface outExchange =
+          UniswapExchangeInterface(factory.getExchange(_outToken));
+
+        uint256 etherCost = outExchange.getEthToTokenOutputPrice(_amount);
+        uint256 tokenCost = inExchange.getTokenToEthOutputPrice(etherCost);
+
+        return (tokenCost, etherCost, inExchange);
     }
 
-    function getExpectedRate(IERC20 from, IERC20 to, uint srcQty) view internal returns (uint) {
-        if (from == ETH_TOKEN_ADDRESS) {
-            address uniswapTokenAddress = uniswapFactory.getExchange(address(to));
-            return wdiv(UniswapExchangeInterface(uniswapTokenAddress).getEthToTokenInputPrice(srcQty), srcQty);
-        } else if (to == ETH_TOKEN_ADDRESS) {
-            address uniswapTokenAddress = uniswapFactory.getExchange(address(from));
-            return wdiv(UniswapExchangeInterface(uniswapTokenAddress).getTokenToEthInputPrice(srcQty), srcQty);
-        } else {
-            uint ethBought = UniswapExchangeInterface(uniswapFactory.getExchange(address(from))).getTokenToEthInputPrice(srcQty);
-            return wdiv(UniswapExchangeInterface(uniswapFactory.getExchange(address(to))).getEthToTokenInputPrice(ethBought), ethBought);
-        }
+    function price(
+        address _outToken,
+        uint256 _amount
+    ) public view returns (uint256, UniswapExchangeInterface) {
+      UniswapExchangeInterface exchange =
+        UniswapExchangeInterface(factory.getExchange(_outToken));
+
+      return (exchange.getEthToTokenOutputPrice(_amount), exchange);
     }
 
-    // TODO:
     function convert(
         Token from,
         Token to, 
-        uint256 srcQty, 
+        uint256 _amount, 
         uint256 minReturn
     ) external payable returns (uint256 destAmount) {
 
@@ -68,14 +74,11 @@ contract UniswapProxy is TokenConverter, Ownable {
 
         address sender = msg.sender;
         if (srcToken == ETH_TOKEN_ADDRESS && destToken != ETH_TOKEN_ADDRESS) {
-            require(msg.value == srcQty, "ETH not enought");
-            destAmount = execSwapEtherToToken(destToken, srcQty, sender);
-        } else if (srcToken != ETH_TOKEN_ADDRESS && destToken == ETH_TOKEN_ADDRESS) {
-            require(msg.value == 0, "ETH not required");    
-            destAmount = execSwapTokenToEther(srcToken, srcQty, sender);
+            require(msg.value == _amount, "ETH not enought");
+            destAmount = execSwapEtherToToken(destToken, _amount, sender);
         } else {
             require(msg.value == 0, "ETH not required");    
-            destAmount = execSwapTokenToToken(srcToken, srcQty, destToken, sender);
+            destAmount = execSwapTokenToToken(srcToken, _amount, destToken, sender);
         }
 
         require(destAmount > minReturn, "Return amount too low");   
@@ -86,81 +89,63 @@ contract UniswapProxy is TokenConverter, Ownable {
 
     /*
     @notice Swap the user's ETH to IERC20 token
-    @param token destination token contract address
-    @param destAddress address to send swapped tokens to
+    @param _token destination token contract address
+    @param _outToken address to send swapped tokens to
     */
-    function execSwapEtherToToken (IERC20 token, uint srcQty, address destAddress) public payable returns(uint) {
+    function execSwapEtherToToken (IERC20 _token, uint _amount, address _outToken) public payable {
         
-        address uniswapTokenAddress = uniswapFactory.getExchange(address(token));
-        // Send the swapped tokens to the destination address and send the swapped tokens to the destination address
-        uint tokenAmount = UniswapExchangeInterface(uniswapTokenAddress).
-                ethToTokenTransferInput.value(srcQty)(1, block.timestamp + 1, destAddress);
-        
-        return tokenAmount;
-    }
+        (
+            uint256 etherCost,
+            UniswapExchangeInterface exchange
+        ) = price(_amount);
 
-    /*
-    @notice Swap the user's IERC20 token to ETH
-    @param token source token contract address
-    @param tokenQty amount of source tokens
-    @param destAddress address to send swapped ETH to
-    */
-    function execSwapTokenToEther (IERC20 token, uint tokenQty, address destAddress) internal returns(uint) {
-        
-        // Check that the player has transferred the token to this contract
-        require(token.transferFrom(msg.sender, address(this), tokenQty), "Error pulling tokens");
+        require(msg.value >= etherCost, "Insufficient ether sent.");
+        exchange.swapEther(_amount, etherCost, block.timestamp + 1, _outToken);
 
-        // Set the spender's token allowance to tokenQty
-        address uniswapTokenAddress = uniswapFactory.getExchange(address(token));
-        token.approve(uniswapTokenAddress, tokenQty);
-
-        // Swap the IERC20 token to ETH and send the swapped ETH to the destination address
-        uint ethAmount = UniswapExchangeInterface(uniswapTokenAddress).tokenToEthTransferInput(tokenQty, 1, block.timestamp + 1, destAddress);
-        
-        return ethAmount;
+        _outToken.safeApprove(recipient, _amount);
+        msg.sender.transfer(msg.value.sub(etherCost));
     }
 
     /*
     @dev Swap the user's IERC20 token to another IERC20 token
-    @param srcToken source token contract address
-    @param srcQty amount of source tokens
-    @param destToken destination token contract address
-    @param destAddress address to send swapped tokens to
+    @param _token source token contract address
+    @param _amount amount of source tokens
+    @param _outToken destination token contract address
+    @param _recipient address to send swapped tokens to
     */
     function execSwapTokenToToken(
-        IERC20 srcToken, 
-        uint256 srcQty, 
-        IERC20 destToken, 
-        address destAddress
-    ) internal returns (uint) {
+        IERC20 _token, 
+        uint256 _amount, 
+        IERC20 _outToken, 
+        address _recipient
+    ) internal {
+
+        // set tokenCost and etherCost and exchange
+        (
+            uint256 tokenCost, 
+            uint256 etherCost, 
+            UniswapExchangeInterface exchange
+        ) = price(address(_token), _amount);
 
         // Check that the player has transferred the token to this contract
-        require(srcToken.transferFrom(msg.sender, address(this), srcQty), "Error pulling tokens");
+        require(_token.safeTransferFrom(msg.sender, address(this), tokenCost), "Error pulling tokens");
 
-        // Set the spender's token allowance to srcQty
-        address uniswapTokenAddress = uniswapFactory.getExchange(address(destToken));
-        srcToken.approve(uniswapTokenAddress, srcQty);
+        // Set the spender's token allowance to tokenCost
+        _token.safeApprove(address(exchange), tokenCost);
 
-        // Swap the IERC20 token to IERC20 and send the swapped tokens to the destination address
-        uint destAmount = UniswapExchangeInterface(uniswapTokenAddress).tokenToTokenTransferInput(
-            srcQty, 
-            1,  //TODO: 
-            1,  //TODO:
-            block.timestamp + 1, 
-            destAddress, 
-            address(destToken)
-        );
-
-        return destAmount;
+        // safe swap tokens
+        exchange.swapTokens(_amount, tokenCost, etherCost, block.timestamp + 1, _outToken);
+        _outToken.safeApprove(_recipient, _amount);
+        
     }
 
     function withdrawTokens(
-        Token _token,
+        IERC20 _token,
         address _to,
         uint256 _amount
     ) external onlyOwner returns (bool) {
         emit WithdrawTokens(address(_token), _to, _amount);
-        return _token.transfer(_to, _amount);
+        return _token.safeTransfer(_to, _amount);
     }
 
     function withdrawEther(
@@ -173,7 +158,4 @@ contract UniswapProxy is TokenConverter, Ownable {
 
     function() external payable {}
 
-    function wdiv(uint x, uint y) internal pure returns (uint z) {
-        z = ((x.mul(WAD)).add(y / 2)) / y;
-    }
 }
