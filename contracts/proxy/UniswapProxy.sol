@@ -8,6 +8,8 @@ import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
 
 pragma solidity 0.5.10;
 
+//  Infinite Test Token (TEST) -> 0x2f45b6fb2f28a73f110400386da31044b2e953d4
+//  Distributed Infinite Test Token (DEST) -> 0x6710d597fd13127a5b64eebe384366b12e66fdb6
 
 contract UniswapProxy is TokenConverter, Ownable {
     
@@ -23,7 +25,7 @@ contract UniswapProxy is TokenConverter, Ownable {
     uint public constant WAD = 10 ** 18;
     IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
-    UniswapFactoryInterface factory;
+    UniswapFactoryInterface factory; // 0x9c83dce8ca20e9aaf9d3efc003b2ea62abc08351
 
     constructor (address _uniswapFactory) public {
         factory = UniswapFactoryInterface(_uniswapFactory);
@@ -127,7 +129,7 @@ contract UniswapProxy is TokenConverter, Ownable {
 
         // safe swap tokens
         exchange.swapTokens(_amount, tokenCost, etherCost, block.timestamp + 1, _outToken);
-        _outToken.safeApprove(_recipient, _amount);
+        _outToken.transfer(_recipient, _amount);
         
     }
 
