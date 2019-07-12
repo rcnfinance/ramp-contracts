@@ -1,20 +1,20 @@
 pragma solidity 0.5.10;
 
-import './Token.sol';
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
 
 interface TokenConverter {
 
     function convert(
-        Token _fromToken,
-        Token _toToken,
+        IERC20 _fromToken,
+        IERC20 _toToken,
         uint256 _fromAmount,
         uint256 _minReturn
     ) external payable returns (uint256 amount);
 
     function getReturn(
-        Token _fromToken,
-        Token _toToken,
+        IERC20 _fromToken,
+        IERC20 _toToken,
         uint256 _fromAmount
     ) external returns (uint256 amount);
 

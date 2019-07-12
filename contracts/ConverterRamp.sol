@@ -3,7 +3,7 @@ pragma solidity 0.5.10;
 import './interfaces/Cosigner.sol';
 import './interfaces/diaspore/DebtEngine.sol';
 import './interfaces/diaspore/LoanManager.sol';
-import './interfaces/token/Token.sol';
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import './interfaces/token/TokenConverter.sol';
 import './interfaces/RateOracle.sol';
 import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
@@ -44,13 +44,13 @@ contract ConverterRamp is Ownable {
     */
     function pay(
         TokenConverter converter,
-        Token fromToken,
+        IERC20 fromToken,
         bytes32[5] calldata loanParams,
         bytes calldata oracleData,
         uint256[3] calldata convertRules
     ) external payable returns (bool) {
-        // Load RCN Token, we need it to pay
-        Token rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
+        // Load RCN IERC20, we need it to pay
+        IERC20 rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
 
         // Load initial RCN balance of contract (probably 0)
         uint256 initialBalance = rcn.balanceOf(address(this));
@@ -103,13 +103,13 @@ contract ConverterRamp is Ownable {
     */
     function requiredLendSell(
         TokenConverter converter,
-        Token fromToken,
+        IERC20 fromToken,
         bytes32[4] calldata loanParams,
         bytes calldata oracleData,
         bytes calldata cosignerData,
         uint256[3] calldata convertRules
     ) external returns (uint256) {
-        Token rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
+        IERC20 rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
         return getOptimalSell(
             converter,
             fromToken,
@@ -126,12 +126,12 @@ contract ConverterRamp is Ownable {
     */
     function requiredPaySell(
         TokenConverter converter,
-        Token fromToken,
+        IERC20 fromToken,
         bytes32[5] calldata loanParams,
         bytes calldata oracleData,
         uint256[3] calldata convertRules
     ) external returns (uint256) {
-        Token rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
+        IERC20 rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
         return getOptimalSell(
             converter,
             fromToken,
@@ -146,14 +146,14 @@ contract ConverterRamp is Ownable {
     */
     function lend(
         TokenConverter converter,
-        Token fromToken,
+        IERC20 fromToken,
         bytes32[4] calldata loanParams,
         bytes calldata oracleData,
         bytes calldata cosignerData,
         uint256[3] calldata convertRules
     ) external payable returns (bool) {
-        // Load RCN Token
-        Token rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
+        // Load RCN IERC20
+        IERC20 rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
 
         // Load balance prior operation
         uint256 initialBalance = rcn.balanceOf(address(this));
@@ -203,7 +203,7 @@ contract ConverterRamp is Ownable {
         Withdraw tokens stalled in the contract
     */
     function withdrawTokens(
-        Token _token,
+        IERC20 _token,
         address _to,
         uint256 _amount
     ) external onlyOwner returns (bool) {
@@ -227,8 +227,8 @@ contract ConverterRamp is Ownable {
     */
     function rebuyAndReturn(
         TokenConverter converter,
-        Token fromToken,
-        Token toToken,
+        IERC20 fromToken,
+        IERC20 toToken,
         uint256 amount,
         uint256 spentAmount,
         uint256[3] memory convertRules
@@ -272,8 +272,8 @@ contract ConverterRamp is Ownable {
     */
     function getOptimalSell(
         TokenConverter converter,
-        Token fromToken,
-        Token toToken,
+        IERC20 fromToken,
+        IERC20 toToken,
         uint256 requiredTo,
         uint256 extraSell
     ) internal returns (uint256 sellAmount) {
@@ -308,8 +308,8 @@ contract ConverterRamp is Ownable {
     */
     function convertSafe(
         TokenConverter converter,
-        Token fromToken,
-        Token toToken,
+        IERC20 fromToken,
+        IERC20 toToken,
         uint256 amount
     ) internal returns (uint256 bought) {
         // If we are converting from ETH, we don't need to approve the converter
@@ -445,7 +445,7 @@ contract ConverterRamp is Ownable {
         @dev If ETH, returns the excedent
     */
     function pullAmount(
-        Token token,
+        IERC20 token,
         uint256 amount
     ) private {
         // Handle both ETH and tokens
@@ -458,7 +458,7 @@ contract ConverterRamp is Ownable {
             }
         } else {
             // If tokens, only perform a transferFrom
-            require(token.transferFrom(msg.sender, address(this), amount), 'Error pulling Token amount');
+            require(token.transferFrom(msg.sender, address(this), amount), 'Error pulling token amount');
         }
     }
 
@@ -466,7 +466,7 @@ contract ConverterRamp is Ownable {
         Transfers token or ETH
     */
     function transfer(
-        Token _token,
+        IERC20 _token,
         address payable _to,
         uint256 _amount
     ) private {

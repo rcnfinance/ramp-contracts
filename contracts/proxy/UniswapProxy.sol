@@ -63,26 +63,22 @@ contract UniswapProxy is TokenConverter, Ownable {
     }
 
     function convert(
-        Token from,
-        Token to, 
+        IERC20 _inToken,
+        IERC20 _outToken, 
         uint256 _amount, 
-        uint256 minReturn
-    ) external payable returns (uint256 destAmount) {
-
-        IERC20 srcToken = IERC20(address(from));
-        IERC20 destToken = IERC20(address(to));       
+        uint256 _minReturn
+    ) external payable returns (uint256 destAmount) {   
 
         address sender = msg.sender;
-        if (srcToken == ETH_TOKEN_ADDRESS && destToken != ETH_TOKEN_ADDRESS) {
-            require(msg.value == _amount, "ETH not enought");
-            destAmount = execSwapEtherToToken(destToken, _amount, sender);
+        if (_inToken == ETH_TOKEN_ADDRESS && _outToken != ETH_TOKEN_ADDRESS) {
+            execSwapEtherToToken(_outToken, _amount, sender);
         } else {
             require(msg.value == 0, "ETH not required");    
-            destAmount = execSwapTokenToToken(srcToken, _amount, destToken, sender);
+            execSwapTokenToToken(_inToken, _amount, _outToken, sender);
         }
 
-        require(destAmount > minReturn, "Return amount too low");   
-        emit Swap(msg.sender, srcToken, destToken, destAmount);
+        //require(_amount > _minReturn, "Return amount too low");   
+        emit Swap(msg.sender, _inToken, _outToken, destAmount);
     
         return destAmount;
     }
@@ -92,13 +88,13 @@ contract UniswapProxy is TokenConverter, Ownable {
     @param _token destination token contract address
     @param _outToken address to send swapped tokens to
     */
-    function execSwapEtherToToken (IERC20 _token, uint _amount, address _outToken) public payable {
+    function execSwapEtherToToken(IERC20 _outToken, uint _amount, address recipient) public payable {
         
         (
             uint256 etherCost,
             UniswapExchangeInterface exchange
-        ) = price(_amount);
-
+        ) = price(address(_outToken), _amount);
+        
         require(msg.value >= etherCost, "Insufficient ether sent.");
         exchange.swapEther(_amount, etherCost, block.timestamp + 1, _outToken);
 
@@ -125,7 +121,7 @@ contract UniswapProxy is TokenConverter, Ownable {
             uint256 tokenCost, 
             uint256 etherCost, 
             UniswapExchangeInterface exchange
-        ) = price(address(_token), _amount);
+        ) = price(address(_token), address(_outToken), _amount);
 
         // Check that the player has transferred the token to this contract
         require(_token.safeTransferFrom(msg.sender, address(this), tokenCost), "Error pulling tokens");
