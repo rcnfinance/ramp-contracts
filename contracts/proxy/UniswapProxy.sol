@@ -36,14 +36,6 @@ contract UniswapProxy is TokenConverter, Ownable {
         return true;
     }
 
-     function getReturn(
-        IERC20 _token,
-        IERC20 _outToken,
-        uint256 _amount
-    ) external returns (uint256 amount) {
-        //TODO : implement
-    }
-    
     function price(
         address _token,
         address _outToken,
@@ -73,9 +65,8 @@ contract UniswapProxy is TokenConverter, Ownable {
     function convert(
         IERC20 _inToken,
         IERC20 _outToken, 
-        uint256 _amount, 
-        uint256 _minReturn
-    ) external payable returns (uint256 destAmount) {   
+        uint256 _amount
+    ) external payable {   
 
         address sender = msg.sender;
         if (_inToken == ETH_TOKEN_ADDRESS && _outToken != ETH_TOKEN_ADDRESS) {
@@ -85,10 +76,7 @@ contract UniswapProxy is TokenConverter, Ownable {
             execSwapTokenToToken(_inToken, _amount, _outToken, sender);
         }
 
-        //require(_amount > _minReturn, "Return amount too low");   
-        emit Swap(msg.sender, _inToken, _outToken, destAmount);
-    
-        return destAmount;
+        emit Swap(msg.sender, _inToken, _outToken, _amount);
     }
 
     /*
