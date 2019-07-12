@@ -35,6 +35,14 @@ contract UniswapProxy is TokenConverter, Ownable {
         emit SetUniswap(_uniswapFactory);
         return true;
     }
+
+     function getReturn(
+        IERC20 _token,
+        IERC20 _outToken,
+        uint256 _amount
+    ) external returns (uint256 amount) {
+        //TODO : implement
+    }
     
     function price(
         address _token,
