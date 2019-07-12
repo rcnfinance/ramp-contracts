@@ -22,7 +22,6 @@ contract UniswapProxy is TokenConverter, Ownable {
     event WithdrawEth(address _to, uint256 _amount);
     event SetUniswap(address _uniswapFactory);
 
-    uint public constant WAD = 10 ** 18;
     IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
     UniswapFactoryInterface factory; // 0x9c83dce8ca20e9aaf9d3efc003b2ea62abc08351
