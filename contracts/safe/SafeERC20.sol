@@ -1,8 +1,7 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.5.10;
 
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
-/// https://github.com/nachomazzara/SafeERC20/blob/master/contracts/libs/SafeERC20.sol
 
 /**
 * @dev Library to perform safe calls to standard method for ERC20 tokens.
@@ -18,6 +17,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 * Since versions of Solidity 0.4.22 the EVM has a new opcode, called RETURNDATASIZE.
 * This opcode stores the size of the returned data of an external call. The code checks the size of the return value
 * after an external call and reverts the transaction in case the return data is shorter than expected
+* https://github.com/nachomazzara/SafeERC20/blob/master/contracts/libs/SafeERC20.sol
 */
 library SafeERC20 {
     /**
@@ -35,11 +35,11 @@ library SafeERC20 {
             return false;
         }
 
-        address(_token).call(
+        (bool success,) = address(_token).call(
             abi.encodeWithSignature("transfer(address,uint256)", _to, _value)
         );
 
-        if (prevBalance - _value != _token.balanceOf(address(this))) {
+        if (!success || prevBalance - _value != _token.balanceOf(address(this))) {
             // Transfer failed
             return false;
         }
@@ -74,11 +74,11 @@ library SafeERC20 {
             return false;
         }
 
-        address(_token).call(
+        (bool success,) = address(_token).call(
             abi.encodeWithSignature("transferFrom(address,address,uint256)", _from, _to, _value)
         );
 
-        if (prevBalance - _value != _token.balanceOf(_from)) {
+        if (!success || prevBalance - _value != _token.balanceOf(_from)) {
             // Transfer failed
             return false;
         }
@@ -100,11 +100,11 @@ library SafeERC20 {
    * @return bool whether the approve was successful or not
    */
     function safeApprove(IERC20 _token, address _spender, uint256 _value) internal returns (bool) {
-        address(_token).call(
+        (bool success,) = address(_token).call(
             abi.encodeWithSignature("approve(address,uint256)",_spender, _value)
         );
 
-        if (_token.allowance(address(this), _spender) != _value) {
+        if (!success && _token.allowance(address(this), _spender) != _value) {
             // Approve failed
             return false;
         }

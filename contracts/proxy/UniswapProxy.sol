@@ -128,7 +128,7 @@ contract UniswapProxy is TokenConverter, Ownable {
 
         // safe swap tokens
         exchange.swapTokens(_amount, tokenCost, etherCost, block.timestamp + 1, _outToken);
-        outToken.approveTokens(_recipient, _amount);
+        _outToken.safeApprove(_recipient, _amount);
         _outToken.safeTransferFrom(address(this), _recipient, _amount);
         
     }

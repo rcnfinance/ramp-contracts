@@ -9,7 +9,7 @@ interface IUniswapExchange{
     function tokenToTokenTransferInput(uint256 tokensSold, uint256 minTokensBought, uint256 minEthBought, uint256 deadline, address recipient, address tokenAddr) external returns (uint256  tokensBought);
 }
 
-contract MockUniswapExchange is IUniswapExchange {
+contract UniswapExchangeMock is IUniswapExchange {
     IERC20 inputToken;
     IERC20 outputToken;
 
