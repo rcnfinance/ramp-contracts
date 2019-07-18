@@ -1,13 +1,15 @@
 pragma solidity ^0.5.10;
 
+import 'openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
+
 
 contract TestDebtEngine {
-    address public token;
+    IERC20 public token;
 
     constructor (
         address _token
     ) public {
-        token = _token;
+        token = IERC20(_token);
     }
 
     function buildId2(
