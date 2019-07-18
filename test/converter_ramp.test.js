@@ -18,19 +18,21 @@ const Helper = require('./helper/Helper.js');
 
 contract('ConverterRamp', function (accounts) {
 
+    // diaspore
     let debtEngine;
     let loanManager;
     let model;
 
+    // converter
     let converterRamp;
-    let uniswapProxy;
 
     // uniswap converter
-    let converter;
     let uniswapExchangeMock;
     let uniswapFactoryMock;
-    // loan
-    let loanId;
+    let uniswapProxy;
+
+    // oracle
+    let oracle;
 
     // tokens
     let simpleTestToken;
@@ -43,7 +45,7 @@ contract('ConverterRamp', function (accounts) {
     const payer = accounts[3];
     const signer = accounts[4];
 
-    const INITIAL_BALANCE = new BN((100 * 10 ** 18).toString());
+    const INITIAL_BALANCE = new BN(2).pow(new BN(20))
 
     async function calcId (_amount, _borrower, _creator, _model, _oracle, _salt, _expiration, _data, _callback = Helper.address0x) {
         const _two = '0x02';
@@ -105,25 +107,26 @@ contract('ConverterRamp', function (accounts) {
 
         // Deploy simple dest token
         simpleDestToken = await TestMock.new('Dest token', 'DEST', 18, { from: owner });
+        await simpleDestToken.mint(lender, INITIAL_BALANCE);
 
-        // Deploy ramp
         converterRamp = await ConverterRamp.new({ from: owner });
 
         // Deploy uniswap
-        uniswapExchangeMock = await UniswapExchangeMock.new(simpleTestToken.address, simpleDestToken.address, { from: owner });
-        await simpleTestToken.mint(uniswapExchangeMock.address, INITIAL_BALANCE); // add liquity.
+        uniswapExchangeMock = await UniswapExchangeMock.new(simpleDestToken.address, simpleTestToken.address, { from: owner });
         await simpleDestToken.mint(uniswapExchangeMock.address, INITIAL_BALANCE); // add liquity.
+        await simpleTestToken.mint(uniswapExchangeMock.address, INITIAL_BALANCE); // add liquity.
         uniswapFactoryMock = await UniswapFactoryMock.new(uniswapExchangeMock.address, { from: owner });
         uniswapProxy = await UniswapProxy.new(uniswapFactoryMock.address, { from: owner })
 
-        // Deploy Ramp
-        converterRamp = await ConverterRamp.new()
-
         // Deploy Diaspore
-
         debtEngine = await TestDebtEngine.new(simpleTestToken.address, { from: owner });
         loanManager = await TestLoanManager.new(debtEngine.address, { from: owner });
         model = await TestModel.new();
+
+        // Deploy oracle
+        oracle = await TestRateOracle.new();
+
+
     });
 
     it('Should lend and pay using the ramp (uniswap)', async () => {
@@ -139,7 +142,7 @@ contract('ConverterRamp', function (accounts) {
             borrower,
             borrower,
             model.address,
-            Helper.address0x,
+            oracle.address,
             salt,
             expiration,
             loanData
@@ -149,7 +152,7 @@ contract('ConverterRamp', function (accounts) {
             loanManager.requestLoan(
                 amount,            // Amount
                 model.address,     // Model
-                Helper.address0x,  // Oracle
+                oracle.address,    // Oracle
                 borrower,          // Borrower
                 Helper.address0x,  // Callback
                 salt,              // salt
@@ -162,37 +165,29 @@ contract('ConverterRamp', function (accounts) {
 
         assert.equal(Requested._id, id);
         const loanId = Helper.toBytes32(id)
-        console.log(loanId)
+        await simpleDestToken.approve(converterRamp.address, -1, { from: lender });
 
-        await simpleTestToken.approve(converterRamp.address, amount.mul(new BN(5)), { from: lender });
-
-        /*const lendLoanParams = [
-            Helper.toBytes32(rcnEngine.address),
-            Helper.toBytes32(loanId),
-            Helper.toBytes32(Helper.address0x),
-        ];
-
-        const convertParams = [
-            new BN(50),
-            new BN(0),
-            new BN(0),
-        ];
+        const oracleData = await oracle.encodeRate(new BN(1), new BN(1));
 
         await converterRamp.lend(
-            bancorProxy.address,
-            tico.address,
-            lendLoanParams,
+            uniswapProxy.address,
+            simpleDestToken.address,
+            loanManager.address,
+            Helper.address0x,
+            debtEngine.address,
+            loanId,
+            amount,
+            oracleData,
             [],
             [],
-            convertParams,
             { from: lender }
-        );
+        )
+/*
+        (await simpleDestToken.balanceOf(converterRamp.address)).should.be.bignumber.equal(new BN(0));
+        (await simpleTestToken.balanceOf(converterRamp.address)).should.be.bignumber.equal(new BN(0));
+        assert.equal(await loanManager.ownerOf(loanId), lender);
 
-        (await tico.balanceOf(converterRamp.address)).should.be.bignumber.equal(new BN(0));
-        (await rcn.balanceOf(converterRamp.address)).should.be.bignumber.equal(new BN(0));
-        assert.equal(await rcnEngine.ownerOf(loanId), lender);
-
-        const payAmount = new BN(333);
+       /* const payAmount = new BN(333);
         await tico.setBalance(lender, payAmount);
         await tico.approve(converterRamp.address, payAmount, { from: payer });
 

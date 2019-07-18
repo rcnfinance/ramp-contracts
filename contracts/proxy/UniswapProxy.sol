@@ -121,7 +121,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         ) = price(address(_token), address(_outToken), _amount);
 
         // Check that the player has transferred the token to this contract
-        require(_token.safeTransferFrom(msg.sender, address(this), tokenCost), "Error pulling tokens");
+        require(_token.safeTransferFrom(msg.sender, address(this), tokenCost), "error pulling tokens");
 
         // Set the spender's token allowance to tokenCost
         _token.safeApprove(address(exchange), tokenCost);
@@ -129,7 +129,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         // safe swap tokens
         exchange.swapTokens(_amount, tokenCost, etherCost, block.timestamp + 1, _outToken);
         _outToken.safeApprove(_recipient, _amount);
-        _outToken.safeTransfer(_recipient, _amount);
+        require(_outToken.safeTransferFrom(address(this), _recipient, _amount), "error sending tokens");
         
     }
 
