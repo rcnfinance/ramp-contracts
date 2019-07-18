@@ -75,7 +75,8 @@ contract ConverterRamp is Ownable {
         bytes32 requestId,
         uint256 amountToPay,
         bytes memory oracleData,
-        bytes memory cosignerData
+        bytes memory cosignerData,
+        bytes memory _callbackData
     ) public payable returns (bool) {
         // Load RCN IERC20
         LoanManager loanManager = LoanManager(loanManagerAddress);
@@ -93,8 +94,9 @@ contract ConverterRamp is Ownable {
             oracleData, 
             cosignerData
         );
+        
         emit RequiredRcn(amount);
-
+        
         // Pull required _fromToken amount to sell
         pullAmount(_fromToken, amount);
 
@@ -103,7 +105,7 @@ contract ConverterRamp is Ownable {
 
         // Lend loan
         require(token.approve(loanManagerAddress, amount), 'Error approving lend token transfer');
-        loanManager.lend(requestId, oracleData, lenderCosignerAddress, 0, cosignerData);
+        loanManager.lend(requestId, oracleData, lenderCosignerAddress, 0, cosignerData, _callbackData);
         require(token.approve(loanManagerAddress, 0), 'Error removing approve');
         
         // Transfer loan to msg.sender

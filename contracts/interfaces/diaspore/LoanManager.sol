@@ -26,7 +26,8 @@ contract LoanManager {
         bytes memory _oracleData,
         address _cosigner,
         uint256 _cosignerLimit,
-        bytes memory _cosignerData
+        bytes memory _cosignerData,
+        bytes memory _callbackData
     ) public returns (bool);
 
 }
