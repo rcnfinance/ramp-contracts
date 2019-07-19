@@ -40,7 +40,7 @@ contract ConverterRamp is Ownable {
         IERC20 token = LoanManager(_loanManagerAddress).token();
 
         // Get amount required, in RCN, for payment
-        uint256 amount = getRequiredRcnPay(_loanManagerAddress, _requestId, _amountToPay, oracleData);
+        uint256 amount = getRequiredRcnPay(_loanManagerAddress, _requestId, oracleData);
         (uint256 tokenCost, uint256 etherCost) = getCost(amount, _converter, _fromToken, address(token));
 
         // Pull amount
@@ -68,7 +68,6 @@ contract ConverterRamp is Ownable {
         address _lenderCosignerAddress,
         address _debtEngineAddress,
         bytes32 _requestId,
-        uint256 _amountToLend,
         bytes memory _oracleData,
         bytes memory _cosignerData,
         bytes memory _callbackData
@@ -80,8 +79,7 @@ contract ConverterRamp is Ownable {
         uint256 amount = getRequiredRcnLend(
             _loanManagerAddress, 
             _lenderCosignerAddress, 
-            _requestId, 
-            _amountToLend, 
+            _requestId,  
             _oracleData, 
             _cosignerData
         );
@@ -193,12 +191,12 @@ contract ConverterRamp is Ownable {
         address _loanManagerAddress,
         address _lenderCosignerAddress,
         bytes32 _requestId,
-        uint256 _amountToPay,
         bytes memory _oracleData,
         bytes memory _cosignerData
-    ) internal returns (uint256) {
+    ) internal returns (uint256 required) {
         // Load loan manager and id
         LoanManager loanManager = LoanManager(_loanManagerAddress);
+        required = loanManager.getAmount(_requestId);
 
         // Load cosigner of loan
         Cosigner cosigner = Cosigner(_lenderCosignerAddress);
@@ -215,9 +213,8 @@ contract ConverterRamp is Ownable {
         
         RateOracle rateOracle = RateOracle(oracle);
         (uint256 _tokens, uint256 _equivalent) = rateOracle.readSample(_oracleData);
-        required = required.add(_toToken(_amountToPay, _tokens, _equivalent));
+        return _toToken(required, _tokens, _equivalent);
 
-        return required; 
     }
 
     /*
@@ -226,12 +223,11 @@ contract ConverterRamp is Ownable {
     function getRequiredRcnPay(
         address _loanManagerAddress,
         bytes32 _requestId,
-        uint256 _amountToPay,
         bytes memory _oracleData
     ) internal returns (uint256 _result) {
         // Load LoanManager and ID
         LoanManager loanManager = LoanManager(_loanManagerAddress);
-
+        uint256 amount = loanManager.getAmount(_requestId);
         // Read loan oracle
         address oracle = loanManager.getOracle(uint256(_requestId))     ;
         require(_oracleData.length > 0 && oracle != address(0), "the oracle is invalid");
@@ -240,7 +236,7 @@ contract ConverterRamp is Ownable {
         (uint256 _tokens, uint256 _equivalent) = rateOracle.readSample(_oracleData);
 
         // Convert the amount to RCN using the Oracle rate
-        return _toToken(_amountToPay, _tokens, _equivalent);
+        return _toToken(amount, _tokens, _equivalent);
     }
 
     /*

@@ -8,6 +8,7 @@ contract LoanManager {
 
     function getCurrency(uint256 _id) external view returns (bytes32);
     function getAmount(uint256 _id) external view returns (uint256);
+    function getAmount(bytes32 _id) external view returns (uint256);
     function getOracle(uint256 _id) external view returns (address);
 
     function settleLend(
