@@ -41,7 +41,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         address _token,
         address _outToken,
         uint256 _amount
-    ) public view returns (uint256, uint256, UniswapExchangeInterface) {
+    ) internal view returns (uint256, uint256, UniswapExchangeInterface) {
         UniswapExchangeInterface inExchange =
           UniswapExchangeInterface(factory.getExchange(_token));
         UniswapExchangeInterface outExchange =
@@ -56,26 +56,57 @@ contract UniswapProxy is TokenConverter, Ownable {
     function price(
         address _outToken,
         uint256 _amount
-    ) public view returns (uint256, UniswapExchangeInterface) {
+    ) internal view returns (uint256, UniswapExchangeInterface) {
       UniswapExchangeInterface exchange =
         UniswapExchangeInterface(factory.getExchange(_outToken));
 
       return (exchange.getEthToTokenOutputPrice(_amount), exchange);
     }
 
+    function getPrice(
+        address _token,
+        address _outToken,
+        uint256 _amount
+    ) public view returns (uint256, uint256) {
+        
+        (
+            uint256 tokenCost, 
+            uint256 etherCost, 
+            UniswapExchangeInterface exchange
+        ) = price(address(_token), address(_outToken), _amount);
+
+        return (tokenCost, etherCost);
+    }
+
+    function getPrice(
+        address _outToken,
+        uint256 _amount
+    ) public view returns (uint256, uint256) {
+        
+        (
+            uint256 etherCost,
+            UniswapExchangeInterface exchange
+        ) = price(address(_outToken), _amount);
+        
+        return (0, etherCost);
+
+    }
+
     function convert(
         IERC20 _inToken,
         IERC20 _outToken, 
         uint256 _amount,
+        uint256 _tokenCost,
+        uint256 _etherCost, 
         address payable _origin
     ) external payable {   
 
         address sender = msg.sender;
         if (_inToken == ETH_TOKEN_ADDRESS && _outToken != ETH_TOKEN_ADDRESS) {
-            execSwapEtherToToken(_outToken, _amount, sender, _origin);
+            execSwapEtherToToken(_outToken, _amount, _etherCost, sender, _origin);
         } else {
             require(msg.value == 0, "ETH not required");    
-            execSwapTokenToToken(_inToken, _amount, _outToken, sender);
+            execSwapTokenToToken(_inToken, _amount, _tokenCost, _etherCost, _outToken, sender);
         }
 
         emit Swap(msg.sender, _inToken, _outToken, _amount);
@@ -83,52 +114,50 @@ contract UniswapProxy is TokenConverter, Ownable {
 
     /*
     @notice Swap the user's ETH to IERC20 token
-    @param _token destination token contract address
-    @param _outToken address to send swapped tokens to
     */
-    function execSwapEtherToToken(IERC20 _outToken, uint _amount, address _recipient, address payable _origin) public payable {
+    function execSwapEtherToToken(
+        IERC20 _outToken, 
+        uint _amount,
+        uint _etherCost, 
+        address _recipient, 
+        address payable _origin
+    ) public payable {
         
-        (
-            uint256 etherCost,
-            UniswapExchangeInterface exchange
-        ) = price(address(_outToken), _amount);
+        UniswapExchangeInterface exchange = UniswapExchangeInterface(factory.getExchange(address(_outToken)));
         
-        require(msg.value >= etherCost, "Insufficient ether sent.");
-        exchange.swapEther(_amount, etherCost, block.timestamp + 1, _outToken);
+        require(msg.value >= _etherCost, "Insufficient ether sent.");
+        exchange.swapEther(_amount, _etherCost, block.timestamp + 1, _outToken);
 
         _outToken.safeTransfer(_recipient, _amount);        
-        _origin.transfer(msg.value.sub(etherCost));
+        _origin.transfer(msg.value.sub(_etherCost));
     }
 
     /*
     @dev Swap the user's IERC20 token to another IERC20 token
     @param _token source token contract address
     @param _amount amount of source tokens
+    @param _tokenCost amount of source _tokenCost
     @param _outToken destination token contract address
     @param _recipient address to send swapped tokens to
     */
     function execSwapTokenToToken(
         IERC20 _token, 
-        uint256 _amount, 
+        uint256 _amount,
+        uint256 _tokenCost,
+        uint256 _etherCost, 
         IERC20 _outToken, 
         address _recipient
     ) internal {
 
-        // set tokenCost and etherCost and exchange
-        (
-            uint256 tokenCost, 
-            uint256 etherCost, 
-            UniswapExchangeInterface exchange
-        ) = price(address(_token), address(_outToken), _amount);
-
+        UniswapExchangeInterface exchange = UniswapExchangeInterface(factory.getExchange(address(_token)));
         // Check that the player has transferred the token to this contract
-        require(_token.safeTransferFrom(msg.sender, address(this), tokenCost), "error pulling tokens");
+        require(_token.safeTransferFrom(msg.sender, address(this), _tokenCost), "error pulling tokens");
 
         // Set the spender's token allowance to tokenCost
-        _token.safeApprove(address(exchange), tokenCost);
+        _token.safeApprove(address(exchange), _tokenCost);
 
         // safe swap tokens
-        exchange.swapTokens(_amount, tokenCost, etherCost, block.timestamp + 1, _outToken);
+        exchange.swapTokens(_amount, _tokenCost, _etherCost, block.timestamp + 1, _outToken);
         _outToken.safeTransfer(_recipient, _amount);        
     }
 
