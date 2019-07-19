@@ -209,12 +209,13 @@ contract ConverterRamp is Ownable {
             required = required.add(cosigner.cost(_loanManagerAddress, uint256(_requestId), _cosignerData, _oracleData));
         }
 
-        // Load the  Oracle rate and convert required        
-        if (_oracleData.length > 0) {
-            RateOracle rateOracle = RateOracle(loanManager.getOracle(uint256(_requestId)));
-            (uint256 _tokens, uint256 _equivalent) = rateOracle.readSample(_oracleData);
-            required = required.add(_toToken(_amountToPay, _tokens, _equivalent));
-        }
+        // Load the  Oracle rate and convert required   
+        address oracle = loanManager.getOracle(uint256(_requestId))     ;
+        require(_oracleData.length > 0 && oracle != address(0), "the oracle is invalid");
+        
+        RateOracle rateOracle = RateOracle(oracle);
+        (uint256 _tokens, uint256 _equivalent) = rateOracle.readSample(_oracleData);
+        required = required.add(_toToken(_amountToPay, _tokens, _equivalent));
 
         return required; 
     }
@@ -232,8 +233,10 @@ contract ConverterRamp is Ownable {
         LoanManager loanManager = LoanManager(_loanManagerAddress);
 
         // Read loan oracle
-        // FIXME Loan with no oracle
-        RateOracle rateOracle = RateOracle(loanManager.getOracle(uint256(_requestId)));
+        address oracle = loanManager.getOracle(uint256(_requestId))     ;
+        require(_oracleData.length > 0 && oracle != address(0), "the oracle is invalid");
+
+        RateOracle rateOracle = RateOracle(oracle);
         (uint256 _tokens, uint256 _equivalent) = rateOracle.readSample(_oracleData);
 
         // Convert the amount to RCN using the Oracle rate
