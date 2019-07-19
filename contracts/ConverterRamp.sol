@@ -16,8 +16,7 @@ contract ConverterRamp is Ownable {
     address public constant ETH_ADDRESS = address(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
     event Return(address token, address to, uint256 amount);
-    event RequiredRcn(uint256 required);
-    event OptimalSell(address token, uint256 amount);
+    event ReadedOracle(address _oracle, uint256 _tokens, uint256 _equivalent);
 
     function() external payable {
         require(msg.value > 0, 'The value is 0.');
@@ -93,7 +92,7 @@ contract ConverterRamp is Ownable {
 
         // Lend loan
         require(token.approve(_loanManagerAddress, amount), 'Error approving lend token transfer');
-        LoanManager(_loanManagerAddress).lend(
+        /*LoanManager(_loanManagerAddress).lend(
             _requestId, 
             _oracleData, 
             _lenderCosignerAddress, 
@@ -107,7 +106,7 @@ contract ConverterRamp is Ownable {
         DebtEngine(_debtEngineAddress).transferFrom(address(this), msg.sender, uint256(_requestId));
 
         // The contract balance should remain the same
-        require(token.balanceOf(address(this)) == 0, 'The contract balance should not change');
+        require(token.balanceOf(address(this)) == 0, 'The contract balance should not change');*/
 
     }
 
@@ -193,28 +192,22 @@ contract ConverterRamp is Ownable {
         bytes32 _requestId,
         bytes memory _oracleData,
         bytes memory _cosignerData
-    ) internal returns (uint256 required) {
+    ) internal returns (uint256) {
         // Load loan manager and id
         LoanManager loanManager = LoanManager(_loanManagerAddress);
-        required = loanManager.getAmount(_requestId);
+        uint256 amount = loanManager.getAmount(_requestId);
 
         // Load cosigner of loan
         Cosigner cosigner = Cosigner(_lenderCosignerAddress);
 
         // If loan has a cosigner, sum the cost
-        uint256 required;
         if (_lenderCosignerAddress != address(0)) {
-            required = required.add(cosigner.cost(_loanManagerAddress, uint256(_requestId), _cosignerData, _oracleData));
+            amount = amount.add(cosigner.cost(_loanManagerAddress, uint256(_requestId), _cosignerData, _oracleData));
         }
 
         // Load the  Oracle rate and convert required   
         address oracle = loanManager.getOracle(uint256(_requestId))     ;
-        require(_oracleData.length > 0 && oracle != address(0), "the oracle is invalid");
-        
-        RateOracle rateOracle = RateOracle(oracle);
-        (uint256 _tokens, uint256 _equivalent) = rateOracle.readSample(_oracleData);
-        return _toToken(required, _tokens, _equivalent);
-
+        return getCurrencyToToken(oracle, amount, _oracleData);
     }
 
     /*
@@ -229,31 +222,21 @@ contract ConverterRamp is Ownable {
         LoanManager loanManager = LoanManager(_loanManagerAddress);
         uint256 amount = loanManager.getAmount(_requestId);
         // Read loan oracle
-        address oracle = loanManager.getOracle(uint256(_requestId))     ;
-        require(_oracleData.length > 0 && oracle != address(0), "the oracle is invalid");
+        address oracle = loanManager.getOracle(uint256(_requestId));
+        return getCurrencyToToken(oracle, amount, _oracleData);
 
-        RateOracle rateOracle = RateOracle(oracle);
-        (uint256 _tokens, uint256 _equivalent) = rateOracle.readSample(_oracleData);
-
-        // Convert the amount to RCN using the Oracle rate
-        return _toToken(amount, _tokens, _equivalent);
     }
 
-    /*
-        Copy of DebtEngine _toToken
-        converts a given amount to RCN tokens, using the Oracle sample
-    */
-    function _toToken(
+    function getCurrencyToToken(
+        address _oracle,
         uint256 _amount,
-        uint256 _tokens,
-        uint256 _equivalent
-    ) internal pure returns (uint256 _result) {
-        require(_tokens != 0, 'Oracle provided invalid rate');
-        uint256 aux = _tokens.mul(_amount);
-        _result = aux / _equivalent;
-        if (aux % _equivalent > 0) {
-            _result = _result.add(1);
-        }
+        bytes memory _oracleData
+    ) internal returns (uint256) {
+        if (_oracle == address(0)) return _amount;
+        (uint256 tokens, uint256 equivalent) = RateOracle(_oracle).readSample(_oracleData);
+
+        emit ReadedOracle(_oracle, tokens, equivalent);
+        return tokens.mul(_amount) / equivalent;
     }
 
     /*
