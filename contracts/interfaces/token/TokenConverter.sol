@@ -8,7 +8,8 @@ interface TokenConverter {
     function convert(
         IERC20 _fromToken,
         IERC20 _toToken,
-        uint256 _fromAmount
+        uint256 _fromAmount,
+        address payable _origin
     ) external payable;
 
 }

@@ -73,7 +73,7 @@ contract ConverterRamp is Ownable {
         address lenderCosignerAddress,
         address debtEngineAddress,
         bytes32 requestId,
-        uint256 amountToPay,
+        uint256 amountToLend,
         bytes memory oracleData,
         bytes memory cosignerData,
         bytes memory _callbackData
@@ -90,11 +90,11 @@ contract ConverterRamp is Ownable {
             loanManagerAddress, 
             lenderCosignerAddress, 
             requestId, 
-            amountToPay, 
+            amountToLend, 
             oracleData, 
             cosignerData
         );
-        
+
         emit RequiredRcn(amount);
         
         // Pull required _fromToken amount to sell
@@ -166,7 +166,7 @@ contract ConverterRamp is Ownable {
 
         // Call convert in token converter
         uint256 sendEth = _fromTokenAddress == ETH_ADDRESS ? _amount : 0;
-        tokenConverter.convert.value(sendEth)(fromToken, toToken, _amount);
+        tokenConverter.convert.value(sendEth)(fromToken, toToken, _amount, msg.sender);
 
         // toToken balance should have increased by _amount
         require(

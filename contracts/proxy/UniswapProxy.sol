@@ -66,12 +66,13 @@ contract UniswapProxy is TokenConverter, Ownable {
     function convert(
         IERC20 _inToken,
         IERC20 _outToken, 
-        uint256 _amount
+        uint256 _amount,
+        address payable _origin
     ) external payable {   
 
         address sender = msg.sender;
         if (_inToken == ETH_TOKEN_ADDRESS && _outToken != ETH_TOKEN_ADDRESS) {
-            execSwapEtherToToken(_outToken, _amount, sender);
+            execSwapEtherToToken(_outToken, _amount, sender, _origin);
         } else {
             require(msg.value == 0, "ETH not required");    
             execSwapTokenToToken(_inToken, _amount, _outToken, sender);
@@ -85,7 +86,7 @@ contract UniswapProxy is TokenConverter, Ownable {
     @param _token destination token contract address
     @param _outToken address to send swapped tokens to
     */
-    function execSwapEtherToToken(IERC20 _outToken, uint _amount, address recipient) public payable {
+    function execSwapEtherToToken(IERC20 _outToken, uint _amount, address _recipient, address payable _origin) public payable {
         
         (
             uint256 etherCost,
@@ -95,8 +96,8 @@ contract UniswapProxy is TokenConverter, Ownable {
         require(msg.value >= etherCost, "Insufficient ether sent.");
         exchange.swapEther(_amount, etherCost, block.timestamp + 1, _outToken);
 
-        _outToken.safeApprove(recipient, _amount);
-        msg.sender.transfer(msg.value.sub(etherCost));
+        _outToken.safeTransfer(_recipient, _amount);        
+        _origin.transfer(msg.value.sub(etherCost));
     }
 
     /*
@@ -128,9 +129,7 @@ contract UniswapProxy is TokenConverter, Ownable {
 
         // safe swap tokens
         exchange.swapTokens(_amount, tokenCost, etherCost, block.timestamp + 1, _outToken);
-        _outToken.safeApprove(_recipient, _amount);
-        require(_outToken.safeTransferFrom(address(this), _recipient, _amount), "error sending tokens");
-        
+        _outToken.safeTransfer(_recipient, _amount);        
     }
 
     function withdrawTokens(
