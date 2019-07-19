@@ -2,12 +2,11 @@ const UniswapProxy = artifacts.require('./proxy/UniswapProxy.sol');
 const UniswapFactoryMock = artifacts.require('./mock/UniswapFactoryMock.sol');
 const UniswapExchangeMock = artifacts.require('./mock/UniswapExchangeMock.sol');
 
-const TestMock = artifacts.require('./mock/TestMock.sol');
+const TestTokenMock = artifacts.require('./mock/TestTokenMock.sol');
 
 const ConverterRamp = artifacts.require('./ConverterRamp.sol');
 
 const TestModel = artifacts.require('./mock/diaspore/TestModel.sol');
-const LoanManager = artifacts.require('./mock/diaspore/LoanManager.sol');
 const TestDebtEngine = artifacts.require('./mock/diaspore/TestDebtEngine.sol');
 const TestLoanManager = artifacts.require('./mock/diaspore/TestLoanManager.sol');
 const TestRateOracle = artifacts.require('./utils/test/TestRateOracle.sol');
@@ -45,7 +44,7 @@ contract('ConverterRamp', function (accounts) {
     const payer = accounts[3];
     const signer = accounts[4];
 
-    const INITIAL_BALANCE = new BN(2).pow(new BN(20))
+    const INITIAL_BALANCE = new BN(2).pow(new BN(250))
 
     async function calcId (_amount, _borrower, _creator, _model, _oracle, _salt, _expiration, _data, _callback = Helper.address0x) {
         const _two = '0x02';
@@ -99,14 +98,14 @@ contract('ConverterRamp', function (accounts) {
     before('Deploy tokens, uniswap, converter, ramp and diaspore', async function () {
         
         // Deploy simple test token
-        simpleTestToken = await TestMock.new('Test token', 'TEST', 18, { from: owner });
+        simpleTestToken = await TestTokenMock.new('Test token', 'TEST', 18, { from: owner });
         await simpleTestToken.mint(borrower, INITIAL_BALANCE);
         await simpleTestToken.mint(lender, INITIAL_BALANCE);
         await simpleTestToken.mint(payer, INITIAL_BALANCE);
         await simpleTestToken.mint(signer, INITIAL_BALANCE);
 
         // Deploy simple dest token
-        simpleDestToken = await TestMock.new('Dest token', 'DEST', 18, { from: owner });
+        simpleDestToken = await TestTokenMock.new('Dest token', 'DEST', 18, { from: owner });
         await simpleDestToken.mint(lender, INITIAL_BALANCE);
 
         converterRamp = await ConverterRamp.new({ from: owner });
@@ -133,7 +132,7 @@ contract('ConverterRamp', function (accounts) {
         
         // Deploy diaspore and request lend
         const salt = new BN(1);
-        const amount = new BN(1031230);
+        const amount = new BN(8);
         const expiration = (await Helper.getBlockTime()) + 1000;
         const loanData = await model.encodeData(amount, expiration);
 
@@ -148,9 +147,10 @@ contract('ConverterRamp', function (accounts) {
             loanData
         );
 
+
         const Requested = await Helper.toEvent(
             loanManager.requestLoan(
-                amount,            // Amount
+                amount,         // Amount
                 model.address,     // Model
                 oracle.address,    // Oracle
                 borrower,          // Borrower
@@ -162,13 +162,20 @@ contract('ConverterRamp', function (accounts) {
             ),
             'Requested'
         );
-
         assert.equal(Requested._id, id);
         const loanId = Helper.toBytes32(id)
+
+        assert.equal(await loanManager.getAmount(loanId), 8);
+
+        const tokens = new BN('1');
+        const equivalent = new BN('1');
+        
         await simpleDestToken.approve(converterRamp.address, -1, { from: lender });
+        const oracleData = await oracle.encodeRate(tokens, equivalent);
 
-        const oracleData = await oracle.encodeRate(new BN(1), new BN(1));
-
+        const amountRCN = amount.mul(tokens).div(equivalent);
+        console.log(amountRCN)
+        
         await converterRamp.lend(
             uniswapProxy.address,
             simpleDestToken.address,
@@ -176,12 +183,13 @@ contract('ConverterRamp', function (accounts) {
             Helper.address0x,
             debtEngine.address,
             loanId,
-            amount,
             oracleData,
             [],
             [],
             { from: lender }
         )
+
+        
 /*
         (await simpleDestToken.balanceOf(converterRamp.address)).should.be.bignumber.equal(new BN(0));
         (await simpleTestToken.balanceOf(converterRamp.address)).should.be.bignumber.equal(new BN(0));
