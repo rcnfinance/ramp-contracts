@@ -13,6 +13,7 @@ const TestRateOracle = artifacts.require('./utils/test/TestRateOracle.sol');
 
 const { BN } = require('openzeppelin-test-helpers');
 const Helper = require('./helper/Helper.js');
+const { expect } = require('chai');
 
 
 contract('ConverterRamp', function (accounts) {
@@ -173,9 +174,7 @@ contract('ConverterRamp', function (accounts) {
         await simpleDestToken.approve(converterRamp.address, -1, { from: lender });
         const oracleData = await oracle.encodeRate(tokens, equivalent);
 
-        const amountRCN = amount.mul(tokens).div(equivalent);
-        console.log(amountRCN)
-        
+                
         await converterRamp.lend(
             uniswapProxy.address,
             simpleDestToken.address,
@@ -188,12 +187,11 @@ contract('ConverterRamp', function (accounts) {
             [],
             { from: lender }
         )
-
         
-/*
-        (await simpleDestToken.balanceOf(converterRamp.address)).should.be.bignumber.equal(new BN(0));
-        (await simpleTestToken.balanceOf(converterRamp.address)).should.be.bignumber.equal(new BN(0));
-        assert.equal(await loanManager.ownerOf(loanId), lender);
+        expect(await simpleDestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+        expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+       
+        /* assert.equal(await loanManager.ownerOf(loanId), lender);
 
        /* const payAmount = new BN(333);
         await tico.setBalance(lender, payAmount);

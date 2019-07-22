@@ -91,8 +91,8 @@ contract ConverterRamp is Ownable {
         convertSafe(_converter, _fromToken, address(token), amount, tokenCost, etherCost);
 
         // Lend loan
-        require(token.approve(_loanManagerAddress, amount), 'Error approving lend token transfer');
-        /*LoanManager(_loanManagerAddress).lend(
+        require(token.approve(_loanManagerAddress, tokenCost), 'Error approving lend token transfer');
+        LoanManager(_loanManagerAddress).lend(
             _requestId, 
             _oracleData, 
             _lenderCosignerAddress, 
@@ -103,10 +103,10 @@ contract ConverterRamp is Ownable {
         require(token.approve(_loanManagerAddress, 0), 'Error removing approve');
         
         // Transfer loan to msg.sender
-        DebtEngine(_debtEngineAddress).transferFrom(address(this), msg.sender, uint256(_requestId));
+        // FIXME: @jpgonzalezra DebtEngine(_debtEngineAddress).transferFrom(address(this), msg.sender, uint256(_requestId));
 
         // The contract balance should remain the same
-        require(token.balanceOf(address(this)) == 0, 'The contract balance should not change');*/
+        require(token.balanceOf(address(this)) == 0, 'The contract balance should not change');
 
     }
 
