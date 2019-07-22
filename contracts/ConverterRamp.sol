@@ -32,17 +32,19 @@ contract ConverterRamp is Ownable {
         address _debtEngineAddress,
         address _payFrom,
         bytes32 _requestId,
-        uint256 _amountToPay,
-        bytes calldata oracleData
-    ) external payable returns (bool) {
+        bytes calldata _oracleData
+    ) external payable {
         // Load RCN IERC20, we need it to pay
         IERC20 token = LoanManager(_loanManagerAddress).token();
 
         // Get amount required, in RCN, for payment
-        uint256 amount = getRequiredRcnPay(_loanManagerAddress, _requestId, oracleData);
+        uint256 amount = getRequiredRcnPay(
+            _loanManagerAddress,
+            _requestId, 
+            _oracleData
+        );
+        
         (uint256 tokenCost, uint256 etherCost) = getCost(amount, _converter, _fromToken, address(token));
-
-        // Pull amount
         pullAmount(_fromToken, tokenCost, etherCost);
 
         // Convert using token _converter
@@ -51,10 +53,10 @@ contract ConverterRamp is Ownable {
         // Pay loan
         DebtEngine debtEngine = DebtEngine(_debtEngineAddress);
         require(token.approve(_debtEngineAddress, amount), "Error on payment approve");
-        debtEngine.pay(_requestId, amount, _payFrom, oracleData);
+        debtEngine.pay(_requestId, amount, _payFrom, _oracleData);
         require(token.approve(_debtEngineAddress, 0), "Error removing the payment approve");
-
-        return true;
+        
+        
     }
 
     /*
