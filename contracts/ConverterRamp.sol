@@ -3,7 +3,7 @@ pragma solidity 0.5.10;
 import './interfaces/Cosigner.sol';
 import './interfaces/diaspore/DebtEngine.sol';
 import './interfaces/diaspore/LoanManager.sol';
-import './interfaces/token/Token.sol';
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import './interfaces/token/TokenConverter.sol';
 import './interfaces/RateOracle.sol';
 import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
@@ -14,196 +14,158 @@ contract ConverterRamp is Ownable {
     using SafeMath for uint256;
 
     address public constant ETH_ADDRESS = address(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
-    uint256 public constant AUTO_MARGIN = 1000001;
-    // index of convert rules for pay and lend
-    uint256 public constant I_MARGIN_SPEND = 0;     // Extra sell percent of amount, 100.000 = 100%
-    uint256 public constant I_MAX_SPEND = 1;        // Max spend on perform a sell, 0 = maximum
-    uint256 public constant I_REBUY_THRESHOLD = 2;  // Threshold of rebuy change, 0 if want to rebuy always
-    // index of loan parameters for pay and lend
-    uint256 public constant I_LOAN_MANAGER = 0;     // Loan Manager contract
-    uint256 public constant I_REQUEST_ID = 1;       // Loan id on Diaspore
-    // for pay
-    uint256 public constant I_PAY_AMOUNT = 2;       // Amount to pay of the loan
-    uint256 public constant I_PAY_FROM = 3;         // The identity of the payer of loan
-    // for lend
-    uint256 public constant I_LEND_COSIGNER = 2;    // Cosigner contract
-    uint256 public constant I_DEBT_ENGINE = 4;      // Address of debt engine
 
-    event RequiredRebuy(address token, uint256 amount);
     event Return(address token, address to, uint256 amount);
-    event OptimalSell(address token, uint256 amount);
-    event RequiredRcn(uint256 required);
-    event RunAutoMargin(uint256 loops, uint256 increment);
+    event ReadedOracle(address _oracle, uint256 _tokens, uint256 _equivalent);
 
     function() external payable {
         require(msg.value > 0, 'The value is 0.');
     }
 
     /*
-        Pays a loan using fromTokens
+    Pays a loan using fromTokens
     */
     function pay(
-        TokenConverter converter,
-        Token fromToken,
-        bytes32[5] calldata loanParams,
-        bytes calldata oracleData,
-        uint256[3] calldata convertRules
+        address _converter,
+        address _fromToken,
+        address _loanManagerAddress,
+        address _debtEngineAddress,
+        address _payFrom,
+        bytes32 _requestId,
+        uint256 _amountToPay,
+        bytes calldata oracleData
     ) external payable returns (bool) {
-        // Load RCN Token, we need it to pay
-        Token rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
-
-        // Load initial RCN balance of contract (probably 0)
-        uint256 initialBalance = rcn.balanceOf(address(this));
+        // Load RCN IERC20, we need it to pay
+        IERC20 token = LoanManager(_loanManagerAddress).token();
 
         // Get amount required, in RCN, for payment
-        uint256 requiredRcn = getRequiredRcnPay(loanParams, oracleData);
-        emit RequiredRcn(requiredRcn);
-
-        // TODO: Remove
-        // Load how much to sell to obtain requiredRcn
-        uint256 optimalSell = getOptimalSell(converter, fromToken, rcn, requiredRcn, convertRules[I_MARGIN_SPEND]);
-        emit OptimalSell(address(fromToken), optimalSell);
+        uint256 amount = getRequiredRcnPay(_loanManagerAddress, _requestId, oracleData);
+        (uint256 tokenCost, uint256 etherCost) = getCost(amount, _converter, _fromToken, address(token));
 
         // Pull amount
-        pullAmount(fromToken, optimalSell);
+        pullAmount(_fromToken, tokenCost, etherCost);
 
-        // Convert using token converter
-        uint256 bought = convertSafe(converter, fromToken, rcn, optimalSell);
+        // Convert using token _converter
+        convertSafe(_converter, _fromToken, address(token), amount, tokenCost, etherCost);
 
         // Pay loan
-        DebtEngine debtEngine = DebtEngine(address(uint256(loanParams[I_DEBT_ENGINE])));
-        require(rcn.approve(address(debtEngine), bought), "Error on payment approve");
-        debtEngine.pay(loanParams[I_REQUEST_ID], bought, address(uint256(loanParams[I_PAY_FROM])), oracleData);
-        require(rcn.approve(address(debtEngine), 0), "Error removing the payment approve");
-
-        // Convert any exceding RCN into fromToken
-        // and send token back to msg.sender
-        require(
-            rebuyAndReturn({
-                converter: converter,
-                fromToken: rcn,
-                toToken: fromToken,
-                amount: rcn.balanceOf(address(this)) - initialBalance,
-                spentAmount: optimalSell,
-                convertRules: convertRules
-            }),
-            'Error rebuying the tokens'
-        );
-
-        // The contract balance should remain the same
-        require(rcn.balanceOf(address(this)) == initialBalance, 'Converter balance has incremented');
+        DebtEngine debtEngine = DebtEngine(_debtEngineAddress);
+        require(token.approve(_debtEngineAddress, amount), "Error on payment approve");
+        debtEngine.pay(_requestId, amount, _payFrom, oracleData);
+        require(token.approve(_debtEngineAddress, 0), "Error removing the payment approve");
 
         return true;
-    }
-
-    /*
-        Returns the required sell for lending a given loan
-
-        @dev For external usage (as view)
-    */
-    function requiredLendSell(
-        TokenConverter converter,
-        Token fromToken,
-        bytes32[4] calldata loanParams,
-        bytes calldata oracleData,
-        bytes calldata cosignerData,
-        uint256[3] calldata convertRules
-    ) external returns (uint256) {
-        Token rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
-        return getOptimalSell(
-            converter,
-            fromToken,
-            rcn,
-            getRequiredRcnLend(loanParams, oracleData, cosignerData),
-            convertRules[I_MARGIN_SPEND]
-        );
-    }
-
-    /*
-        Returns the required sell for paying a given loan
-
-        @dev For external usage (as view)
-    */
-    function requiredPaySell(
-        TokenConverter converter,
-        Token fromToken,
-        bytes32[5] calldata loanParams,
-        bytes calldata oracleData,
-        uint256[3] calldata convertRules
-    ) external returns (uint256) {
-        Token rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
-        return getOptimalSell(
-            converter,
-            fromToken,
-            rcn,
-            getRequiredRcnPay(loanParams, oracleData),
-            convertRules[I_MARGIN_SPEND]
-        );
     }
 
     /*
         Lends a loan using fromTokens, transfer loan ownership to msg.sender
     */
     function lend(
-        TokenConverter converter,
-        Token fromToken,
-        bytes32[4] calldata loanParams,
-        bytes calldata oracleData,
-        bytes calldata cosignerData,
-        uint256[3] calldata convertRules
-    ) external payable returns (bool) {
-        // Load RCN Token
-        Token rcn = LoanManager(address(uint256(loanParams[I_LOAN_MANAGER]))).token();
-
-        // Load balance prior operation
-        uint256 initialBalance = rcn.balanceOf(address(this));
+        address _converter,
+        address _fromToken,
+        address _loanManagerAddress,
+        address _lenderCosignerAddress,
+        address _debtEngineAddress,
+        bytes32 _requestId,
+        bytes memory _oracleData,
+        bytes memory _cosignerData,
+        bytes memory _callbackData
+    ) public payable {
+        // Load RCN IERC20
+        IERC20 token = LoanManager(_loanManagerAddress).token();
 
         // Get required RCN for lending the loan
-        uint256 requiredRcn = getRequiredRcnLend(loanParams, oracleData, cosignerData);
-        emit RequiredRcn(requiredRcn);
-
-        // Load optimal fromToken sell to obtain requiredRcn
-        uint256 optimalSell = getOptimalSell(converter, fromToken, rcn, requiredRcn, convertRules[I_MARGIN_SPEND]);
-        emit OptimalSell(address(fromToken), optimalSell);
-
-        // Pull required fromToken amount to sell
-        pullAmount(fromToken, optimalSell);
-
-        // Convert fromToken into RCN
-        uint256 bought = convertSafe(converter, fromToken, rcn, optimalSell);
-
-        // Lend loan
-        require(rcn.approve(address(uint256(loanParams[I_LOAN_MANAGER])), bought), 'Error approving lend token transfer');
-        require(executeLend(loanParams, oracleData, cosignerData), 'Error lending the loan');
-        require(rcn.approve(address(uint256(loanParams[I_LOAN_MANAGER])), 0), 'Error removing approve');
-        // Transfer loan to msg.sender
-        require(executeTransfer(loanParams, msg.sender), 'Error transfering the loan');
-
-        // Convert any exceding RCN into fromToken
-        // and send token back to msg.sender
-        require(
-            rebuyAndReturn({
-                converter: converter,
-                fromToken: rcn,
-                toToken: fromToken,
-                amount: rcn.balanceOf(address(this)) - initialBalance,
-                spentAmount: optimalSell,
-                convertRules: convertRules
-            }),
-            'Error rebuying the tokens'
+        uint256 amount = getRequiredRcnLend(
+            _loanManagerAddress, 
+            _lenderCosignerAddress, 
+            _requestId,  
+            _oracleData, 
+            _cosignerData
         );
 
-        // The contract balance should remain the same
-        require(rcn.balanceOf(address(this)) == initialBalance, 'The contract balance should not change');
+        // Pull required _fromToken amount to sell
+        (uint256 tokenCost, uint256 etherCost) = getCost(amount, _converter, _fromToken, address(token));
+        pullAmount(_fromToken, tokenCost, etherCost);
 
-        return true;
+        // Convert _fromToken into RCN
+        convertSafe(_converter, _fromToken, address(token), amount, tokenCost, etherCost);
+
+        // Lend loan
+        require(token.approve(_loanManagerAddress, tokenCost), 'Error approving lend token transfer');
+        LoanManager(_loanManagerAddress).lend(
+            _requestId, 
+            _oracleData, 
+            _lenderCosignerAddress, 
+            0, 
+            _cosignerData, 
+            _callbackData
+        );
+        require(token.approve(_loanManagerAddress, 0), 'Error removing approve');
+        
+        // Transfer loan to msg.sender
+        // FIXME: @jpgonzalezra DebtEngine(_debtEngineAddress).transferFrom(address(this), msg.sender, uint256(_requestId));
+
+        // The contract balance should remain the same
+        require(token.balanceOf(address(this)) == 0, 'The contract balance should not change');
+
+    }
+
+    function getCost(uint _amount, address _converter, address _fromToken, address _token) internal returns (uint256, uint256)  {
+        TokenConverter tokenConverter = TokenConverter(_converter);
+        if (_fromToken != ETH_ADDRESS) {
+            return tokenConverter.getPrice(_fromToken, _token, _amount);
+        } else {
+            return tokenConverter.getPrice(_token, _amount);
+        }
+    }
+
+    /*
+        Converts an amount using a converter, not trusting the converter,
+        validates all convertions using the token contract.
+
+        Handles, internally, ETH convertions
+    */
+    function convertSafe(
+        address _converter,
+        address _fromTokenAddress,
+        address _toTokenAddress,
+        uint256 _amount,
+        uint256 _tokenCost,
+        uint256 _etherCost
+    ) internal returns (uint256 bought) {
+
+        IERC20 fromToken = IERC20(_fromTokenAddress);
+        IERC20 toToken = IERC20(_toTokenAddress);
+        TokenConverter tokenConverter = TokenConverter(_converter);
+
+        // If we are converting from ETH, we don't need to approve the converter
+        if (_toTokenAddress != ETH_ADDRESS) {
+            require(fromToken.approve(address(tokenConverter), _tokenCost), 'Error approving token transfer');
+        }
+
+        // Store the previus balance to validate after convertion
+        uint256 prevBalance = _toTokenAddress != ETH_ADDRESS ? toToken.balanceOf(address(this)) : address(this).balance;
+
+        // Call convert in token converter
+        uint256 sendEth = _fromTokenAddress == ETH_ADDRESS ? _amount : 0;
+        tokenConverter.convert.value(sendEth)(fromToken, toToken, _amount, _tokenCost, _etherCost, msg.sender);
+
+        // toToken balance should have increased by _amount
+        require(
+            _amount == (_toTokenAddress != ETH_ADDRESS ? toToken.balanceOf(address(this)) : address(this).balance) - prevBalance,
+            'Bought amound does does not match'
+        );
+
+        // If we are converting from a token, remove the approve
+        if (_fromTokenAddress != ETH_ADDRESS) require(fromToken.approve(address(tokenConverter), 0), 'Error removing token approve');
+
     }
 
     /*
         Withdraw tokens stalled in the contract
     */
     function withdrawTokens(
-        Token _token,
+        IERC20 _token,
         address _to,
         uint256 _amount
     ) external onlyOwner returns (bool) {
@@ -220,245 +182,83 @@ contract ConverterRamp is Ownable {
         _to.transfer(_amount);
     }
 
-    /*
-        Rebuys and/or returns an amount to the msg.sender, acording to the rules set by convertRules
-
-        Validates that spentAmount is lower than the maxSend
-    */
-    function rebuyAndReturn(
-        TokenConverter converter,
-        Token fromToken,
-        Token toToken,
-        uint256 amount,
-        uint256 spentAmount,
-        uint256[3] memory convertRules
-    ) internal returns (bool) {
-        // Load required amount to convert back to toToken
-        // (avoid irrelevant convertions, save gas)
-        uint256 threshold = convertRules[I_REBUY_THRESHOLD];
-
-        // Store bought amount
-        // if nothing is bought, zero
-        uint256 bought = 0;
-
-        if (amount != 0) {
-            if (amount > threshold) {
-                // Amount exceeds threshold, must convert to toToken
-                bought = convertSafe(converter, fromToken, toToken, amount);
-                emit RequiredRebuy(address(toToken), amount);
-                emit Return(address(toToken), msg.sender, bought);
-                // Transfer bought tokens to msg.sender
-                transfer(toToken, msg.sender, bought);
-            } else {
-                // Amount does not amerite convertion
-                // send as fromToken
-                emit Return(address(fromToken), msg.sender, amount);
-                transfer(fromToken, msg.sender, amount);
-            }
-        }
-
-        // The spentAmount accounting the re-bought
-        // should be lower than the max spend parameter
-        uint256 maxSpend = convertRules[I_MAX_SPEND];
-        require(spentAmount.sub(bought) <= maxSpend || maxSpend == 0, 'Max spend exceeded');
-
-        return true;
-    }
-
-    /*
-        TODO: Remove this method, replace it with a new method in TokenConverter
-
-        Returns the optimal amount to sell in order to buy requiredTo toToken
-    */
-    function getOptimalSell(
-        TokenConverter converter,
-        Token fromToken,
-        Token toToken,
-        uint256 requiredTo,
-        uint256 extraSell
-    ) internal returns (uint256 sellAmount) {
-        uint256 sellRate = (10 ** 18 * converter.getReturn(toToken, fromToken, requiredTo)) / requiredTo;
-        if (extraSell == AUTO_MARGIN) {
-            uint256 expectedReturn = 0;
-            uint256 optimalSell = applyRate(requiredTo, sellRate);
-            uint256 increment = applyRate(requiredTo / 100000, sellRate);
-            uint256 returnRebuy;
-            uint256 cl;
-
-            while (expectedReturn < requiredTo && cl < 10) {
-                optimalSell += increment;
-                returnRebuy = converter.getReturn(fromToken, toToken, optimalSell);
-                optimalSell = (optimalSell * requiredTo) / returnRebuy;
-                expectedReturn = returnRebuy;
-                cl++;
-            }
-            emit RunAutoMargin(cl, increment);
-
-            return optimalSell;
-        } else {
-            return applyRate(requiredTo, sellRate).mul(uint256(100000).add(extraSell)) / 100000;
-        }
-    }
-
-    /*
-        Converts an amount using a converter, not trusting the converter,
-        validates all convertions using the token contract.
-
-        Handles, internally, ETH convertions
-    */
-    function convertSafe(
-        TokenConverter converter,
-        Token fromToken,
-        Token toToken,
-        uint256 amount
-    ) internal returns (uint256 bought) {
-        // If we are converting from ETH, we don't need to approve the converter
-        if (address(fromToken) != ETH_ADDRESS) {
-            require(fromToken.approve(address(converter), amount), 'Error approving token transfer');
-        }
-
-        // Store the previus balance to validate after convertion
-        uint256 prevBalance = address(toToken) != ETH_ADDRESS ? toToken.balanceOf(address(this)) : address(this).balance;
-
-        // Call convert in token converter
-        uint256 sendEth = address(fromToken) == ETH_ADDRESS ? amount : 0;
-        uint256 boughtAmount = converter.convert.value(sendEth)(fromToken, toToken, amount, 1);
-
-        // toToken balance should have increased by boughtAmount
-        require(
-            boughtAmount == (address(toToken) != ETH_ADDRESS ? toToken.balanceOf(address(this)) : address(this).balance) - prevBalance,
-            'Bought amound does does not match'
-        );
-
-        // If we are converting from a token, remove the approve
-        if (address(fromToken) != ETH_ADDRESS) require(fromToken.approve(address(converter), 0), 'Error removing token approve');
-
-        // Return the bought amount
-        return boughtAmount;
-    }
-
-    /*
-        Execute lend, reading from params
-    */
-    function executeLend(
-        bytes32[4] memory params,
-        bytes memory oracleData,
-        bytes memory cosignerData
-    ) internal returns (bool) {
-        LoanManager loanManager = LoanManager(address(uint256(params[I_LOAN_MANAGER])));
-        bytes32 id = params[I_REQUEST_ID];
-        return loanManager.lend(id, oracleData, address(uint256(params[I_LEND_COSIGNER])), 0, cosignerData);
-    }
-
-    /*
-        Execute transfer debt, reading from params
-    */
-    function executeTransfer(
-        bytes32[4] memory params,
-        address to
-    ) internal returns (bool) {
-        DebtEngine debtEngine = DebtEngine(address(uint256(params[I_DEBT_ENGINE])));
-        debtEngine.transferFrom(address(this), to, uint256(params[I_REQUEST_ID]));
-        return true;
-    }
-
-    /*
-        TODO: Remove with getOptimalSell
-
-        Aplies a rate using a previus convertion
-    */
-    function applyRate(
-        uint256 amount,
-        uint256 rate
-    ) internal pure returns (uint256) {
-        return amount.mul(rate) / 10 ** 18;
-    }
 
     /*
         Returns how much RCN is required for a given lend
     */
     function getRequiredRcnLend(
-        bytes32[4] memory params,
-        bytes memory oracleData,
-        bytes memory cosignerData
-    ) internal returns (uint256 required) {
+        address _loanManagerAddress,
+        address _lenderCosignerAddress,
+        bytes32 _requestId,
+        bytes memory _oracleData,
+        bytes memory _cosignerData
+    ) internal returns (uint256) {
         // Load loan manager and id
-        LoanManager loanManager = LoanManager(address(uint256(params[I_LOAN_MANAGER])));
-        uint256 id = uint256(params[I_REQUEST_ID]);
+        LoanManager loanManager = LoanManager(_loanManagerAddress);
+        uint256 amount = loanManager.getAmount(_requestId);
 
         // Load cosigner of loan
-        Cosigner cosigner = Cosigner(address(uint256(params[I_LEND_COSIGNER])));
+        Cosigner cosigner = Cosigner(_lenderCosignerAddress);
 
         // If loan has a cosigner, sum the cost
-        if (address(cosigner) != address(0)) {
-            required += cosigner.cost(address(loanManager), id, cosignerData, oracleData);
+        if (_lenderCosignerAddress != address(0)) {
+            amount = amount.add(cosigner.cost(_loanManagerAddress, uint256(_requestId), _cosignerData, _oracleData));
         }
 
-        // Load the  Oracle rate and convert required
-        // FIXME Loan with no oracle
-        RateOracle rateOracle = RateOracle(loanManager.getOracle(id));
-        (uint256 _tokens, uint256 _equivalent) = rateOracle.readSample(oracleData);
-        // FIXME return tokenAmount, do not add amounts
-        required += _toToken(uint256(params[I_PAY_AMOUNT]), _tokens, _equivalent);
+        // Load the  Oracle rate and convert required   
+        address oracle = loanManager.getOracle(uint256(_requestId))     ;
+        return getCurrencyToToken(oracle, amount, _oracleData);
     }
 
     /*
         Returns how much RCN is required for a given pay
     */
     function getRequiredRcnPay(
-        bytes32[5] memory params,
-        bytes memory oracleData
+        address _loanManagerAddress,
+        bytes32 _requestId,
+        bytes memory _oracleData
     ) internal returns (uint256 _result) {
         // Load LoanManager and ID
-        LoanManager loanManager = LoanManager(address(uint256(params[I_LOAN_MANAGER])));
-        uint256 id = uint256(params[I_REQUEST_ID]);
-
+        LoanManager loanManager = LoanManager(_loanManagerAddress);
+        uint256 amount = loanManager.getAmount(_requestId);
         // Read loan oracle
-        // FIXME Loan with no oracle
-        RateOracle rateOracle = RateOracle(loanManager.getOracle(id));
-        (uint256 _tokens, uint256 _equivalent) = rateOracle.readSample(oracleData);
+        address oracle = loanManager.getOracle(uint256(_requestId));
+        return getCurrencyToToken(oracle, amount, _oracleData);
 
-        // Convert the amount to RCN using the Oracle rate
-        return _toToken(uint256(params[I_PAY_AMOUNT]), _tokens, _equivalent);
     }
 
-    /*
-        Copy of DebtEngine _toToken
-        converts a given amount to RCN tokens, using the Oracle sample
-    */
-    function _toToken(
+    function getCurrencyToToken(
+        address _oracle,
         uint256 _amount,
-        uint256 _tokens,
-        uint256 _equivalent
-    ) internal pure returns (uint256 _result) {
-        require(_tokens != 0, 'Oracle provided invalid rate');
-        uint256 aux = _tokens.mul(_amount);
-        _result = aux / _equivalent;
-        if (aux % _equivalent > 0) {
-            _result = _result.add(1);
-        }
+        bytes memory _oracleData
+    ) internal returns (uint256) {
+        if (_oracle == address(0)) return _amount;
+        (uint256 tokens, uint256 equivalent) = RateOracle(_oracle).readSample(_oracleData);
+
+        emit ReadedOracle(_oracle, tokens, equivalent);
+        return tokens.mul(_amount) / equivalent;
     }
 
     /*
-        Pulls an amount in token or eth from the msg.sender
-
+        Pulls an _amount in _token or eth from the msg.sender
         @dev If ETH, returns the excedent
     */
     function pullAmount(
-        Token token,
-        uint256 amount
+        address _token,
+        uint256 _tokenCost,
+        uint256 _etherCost
     ) private {
         // Handle both ETH and tokens
-        if (address(token) == ETH_ADDRESS) {
-            // If ETH, require msg.value to be at least the required amount
-            require(msg.value >= amount, 'Error pulling ETH amount');
+        if (_token == ETH_ADDRESS) {
+            // If ETH, require msg.value to be at least the required _etherCost
+            require(msg.value >= _etherCost, 'Error pulling ETH etherCost');
             // Return any exceding ETH, if any
-            if (msg.value > amount) {
-                msg.sender.transfer(msg.value - amount);
+            if (msg.value > _etherCost) {
+                msg.sender.transfer(msg.value - _etherCost);
             }
         } else {
             // If tokens, only perform a transferFrom
-            require(token.transferFrom(msg.sender, address(this), amount), 'Error pulling Token amount');
+            require(IERC20(_token).transferFrom(msg.sender, address(this), _tokenCost), 'Error pulling token amount');
         }
     }
 
@@ -466,7 +266,7 @@ contract ConverterRamp is Ownable {
         Transfers token or ETH
     */
     function transfer(
-        Token _token,
+        IERC20 _token,
         address payable _to,
         uint256 _amount
     ) private {

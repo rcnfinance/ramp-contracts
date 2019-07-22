@@ -1,13 +1,14 @@
 pragma solidity 0.5.10;
 
-import '../token/Token.sol';
+import 'openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
 
 
 contract LoanManager {
-    Token public token;
+    IERC20 public token;
 
     function getCurrency(uint256 _id) external view returns (bytes32);
     function getAmount(uint256 _id) external view returns (uint256);
+    function getAmount(bytes32 _id) external view returns (uint256);
     function getOracle(uint256 _id) external view returns (address);
 
     function settleLend(
@@ -26,7 +27,8 @@ contract LoanManager {
         bytes memory _oracleData,
         address _cosigner,
         uint256 _cosignerLimit,
-        bytes memory _cosignerData
+        bytes memory _cosignerData,
+        bytes memory _callbackData
     ) public returns (bool);
 
 }
