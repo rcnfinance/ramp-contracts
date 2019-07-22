@@ -1,9 +1,9 @@
 pragma solidity ^0.5.10;
 
 import 'openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
+import './../../common/ERC721Base.sol';
 
-
-contract TestDebtEngine {
+contract TestDebtEngine is ERC721Base {
 
     event Paid(
         bytes32 indexed _id,
@@ -18,9 +18,12 @@ contract TestDebtEngine {
     IERC20 public token;
 
     constructor (
-        address _token
-    ) public {
-        token = IERC20(_token);
+        IERC20 _token
+    ) public ERC721Base("RCN Debt Record", "RDR") {
+        token = _token;
+
+        // Sanity checks
+        require(address(_token).isContract(), "Token should be a contract");
     }
 
     function buildId2(
