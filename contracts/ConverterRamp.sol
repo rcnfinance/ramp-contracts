@@ -105,14 +105,14 @@ contract ConverterRamp is Ownable {
         require(token.approve(_loanManagerAddress, 0), 'Error removing approve');
         
         // Transfer loan to msg.sender
-        // FIXME: @jpgonzalezra DebtEngine(_debtEngineAddress).transferFrom(address(this), msg.sender, uint256(_requestId));
+        // DebtEngine(_debtEngineAddress).transferFrom(address(this), msg.sender, uint256(_requestId));
 
         // The contract balance should remain the same
         require(token.balanceOf(address(this)) == 0, 'The contract balance should not change');
 
     }
 
-    function getCost(uint _amount, address _converter, address _fromToken, address _token) internal returns (uint256, uint256)  {
+    function getCost(uint _amount, address _converter, address _fromToken, address _token) public view returns (uint256, uint256)  {
         TokenConverter tokenConverter = TokenConverter(_converter);
         if (_fromToken != ETH_ADDRESS) {
             return tokenConverter.getPrice(_fromToken, _token, _amount);
