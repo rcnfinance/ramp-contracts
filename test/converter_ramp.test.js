@@ -108,6 +108,7 @@ contract('ConverterRamp', function (accounts) {
         // Deploy simple dest token
         simpleDestToken = await TestTokenMock.new('Dest token', 'DEST', 18, { from: owner });
         await simpleDestToken.mint(lender, INITIAL_BALANCE);
+        await simpleDestToken.mint(payer, INITIAL_BALANCE);
 
         converterRamp = await ConverterRamp.new({ from: owner });
 
@@ -191,27 +192,24 @@ contract('ConverterRamp', function (accounts) {
         expect(await simpleDestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
         expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
        
-        /* assert.equal(await loanManager.ownerOf(loanId), lender);
+        // assert.equal(await loanManager.ownerOf(loanId), lender);
 
-       /* const payAmount = new BN(333);
-        await tico.setBalance(lender, payAmount);
-        await tico.approve(converterRamp.address, payAmount, { from: payer });
-
-        const payLoanParams = [
-            Helper.toBytes32(rcnEngine.address),
-            Helper.toBytes32(loanId),
-            Helper.toBytes32(toWei(100)),
-            Helper.toBytes32(payer),
-        ];
+        await simpleDestToken.approve(converterRamp.address, -1, { from: payer });
 
         await converterRamp.pay(
-            converter.address,
-            tico.address,
-            payLoanParams,
-            [],
-            convertParams,
+            uniswapProxy.address,
+            simpleDestToken.address,
+            loanManager.address,
+            debtEngine.address,
+            payer,
+            loanId,
+            oracleData,
             { from: payer }
-        );*/
+        );
+
+        expect(await simpleDestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+        expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+        
     });
 
 });
