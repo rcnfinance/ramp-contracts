@@ -167,12 +167,12 @@ contract('ConverterRamp', function (accounts) {
         assert.equal(Requested._id, id);
         const loanId = Helper.toBytes32(id)
 
-        assert.equal(await loanManager.getAmount(loanId), 8);
+        expect(await loanManager.getAmount(loanId)).to.be.bignumber.equal(amount);
 
-        const tokens = new BN('1');
-        const equivalent = new BN('1');
+        const tokens = new BN(1);
+        const equivalent = new BN(1);
         
-        await simpleDestToken.approve(converterRamp.address, -1, { from: lender });
+        await simpleDestToken.approve(converterRamp.address, amount, { from: lender });
         const oracleData = await oracle.encodeRate(tokens, equivalent);
 
                 
@@ -192,9 +192,9 @@ contract('ConverterRamp', function (accounts) {
         expect(await simpleDestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
         expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
        
-        // assert.equal(await loanManager.ownerOf(loanId), lender);
+        assert.equal(await loanManager.ownerOf(loanId), lender);
 
-        await simpleDestToken.approve(converterRamp.address, -1, { from: payer });
+        await simpleDestToken.approve(converterRamp.address, amount, { from: payer });
 
         await converterRamp.pay(
             uniswapProxy.address,
