@@ -106,7 +106,7 @@ contract ConverterRamp is Ownable {
         );
         
         // Transfer loan to msg.sender
-        // DebtEngine(_debtEngineAddress).transferFrom(address(this), msg.sender, uint256(_requestId));
+        DebtEngine(_debtEngineAddress).transferFrom(address(this), msg.sender, uint256(_requestId));
 
         require(token.safeApprove(_loanManagerAddress, 0), 'Error removing approve');
         require(token.balanceOf(address(this)) == 0, 'The contract balance should be zero');
@@ -123,10 +123,9 @@ contract ConverterRamp is Ownable {
     }
 
     /*
-        Converts an amount using a converter, not trusting the converter,
-        validates all convertions using the token contract.
-
-        Handles, internally, ETH convertions
+    *    Converts an amount using a converter, not trusting the converter,
+    *    validates all convertions using the token contract.
+    *    Handles, internally, ETH convertions
     */
     function convertSafe(
         address _converter,
