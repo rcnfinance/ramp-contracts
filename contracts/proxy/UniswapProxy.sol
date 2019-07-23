@@ -9,8 +9,6 @@ pragma solidity 0.5.10;
 
 //  Infinite Test Token (TEST) -> 0x2f45b6fb2f28a73f110400386da31044b2e953d4
 //  Distributed Infinite Test Token (DEST) -> 0x6710d597fd13127a5b64eebe384366b12e66fdb6
-//  ropsten UniswapProxy -> 0x1c25d8c20aec347b1c3541d75a8a40dee30bf12d
-
 contract UniswapProxy is TokenConverter, Ownable {
     
     using SafeMath for uint256;
@@ -128,7 +126,8 @@ contract UniswapProxy is TokenConverter, Ownable {
         require(msg.value >= _etherCost, "Insufficient ether sent.");
         exchange.swapEther(_amount, _etherCost, block.timestamp + 1, _outToken);
 
-        _outToken.safeTransfer(_recipient, _amount);        
+        _outToken.safeTransfer(_recipient, _amount); 
+        // Return any exceding ETH, if any
         _origin.transfer(msg.value.sub(_etherCost));
     }
 
@@ -159,23 +158,6 @@ contract UniswapProxy is TokenConverter, Ownable {
         // safe swap tokens
         exchange.swapTokens(_amount, _tokenCost, _etherCost, block.timestamp + 1, _outToken);
         _outToken.safeTransfer(_recipient, _amount);        
-    }
-
-    function withdrawTokens(
-        address _token,
-        address _to,
-        uint256 _amount
-    ) external onlyOwner returns (bool) {
-        emit WithdrawTokens(address(_token), _to, _amount);
-        return IERC20(_token).safeTransfer(_to, _amount);
-    }
-
-    function withdrawEther(
-        address payable _to,
-        uint256 _amount
-    ) external onlyOwner {
-        emit WithdrawEth(_to, _amount);
-        _to.transfer(_amount);
     }
 
     function() external payable {}
