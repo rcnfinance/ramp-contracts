@@ -103,7 +103,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         if (_inToken == ETH_TOKEN_ADDRESS && _outToken != ETH_TOKEN_ADDRESS) {
             execSwapEtherToToken(_outToken, _amount, _etherCost, sender, _origin);
         } else {
-            require(msg.value == 0, "ETH not required");    
+            require(msg.value == 0, "eth not required");    
             execSwapTokenToToken(_inToken, _amount, _tokenCost, _etherCost, _outToken, sender);
         }
 
@@ -123,10 +123,10 @@ contract UniswapProxy is TokenConverter, Ownable {
         
         UniswapExchangeInterface exchange = UniswapExchangeInterface(factory.getExchange(address(_outToken)));
         
-        require(msg.value >= _etherCost, "Insufficient ether sent.");
+        require(msg.value >= _etherCost, "insufficient ether sent.");
         exchange.swapEther(_amount, _etherCost, block.timestamp + 1, _outToken);
 
-        _outToken.safeTransfer(_recipient, _amount); 
+        require(_outToken.safeTransfer(_recipient, _amount), "error transfer tokens"); 
         // Return any exceding ETH, if any
         _origin.transfer(msg.value.sub(_etherCost));
     }
@@ -157,7 +157,7 @@ contract UniswapProxy is TokenConverter, Ownable {
 
         // safe swap tokens
         exchange.swapTokens(_amount, _tokenCost, _etherCost, block.timestamp + 1, _outToken);
-        _outToken.safeTransfer(_recipient, _amount);        
+        require(_outToken.safeTransfer(_recipient, _amount), "error transfer tokens");        
     }
 
     function() external payable {}

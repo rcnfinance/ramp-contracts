@@ -46,11 +46,8 @@ contract ConverterRamp is Ownable {
             _oracleData
         );
         
-        (uint256 tokenCost, uint256 etherCost) = getCost(amount, _converter, _fromToken, address(token));
-        require(IERC20(_fromToken).safeTransferFrom(msg.sender, address(this), tokenCost), 'Error pulling token amount');
-
-        // Convert using token _converter
-        convertSafe(_converter, _fromToken, address(token), amount, tokenCost, etherCost);
+        // Convert using token cconverter
+        convertSafe(_converter, _loanManagerAddress, _fromToken, address(token), amount);
 
         // Pay loan
         DebtEngine debtEngine = DebtEngine(_debtEngineAddress);
@@ -87,15 +84,9 @@ contract ConverterRamp is Ownable {
             _cosignerData
         );
 
-        // Pull required _fromToken amount to sell
-        (uint256 tokenCost, uint256 etherCost) = getCost(amount, _converter, _fromToken, address(token));
-        require(IERC20(_fromToken).safeTransferFrom(msg.sender, address(this), tokenCost), 'Error pulling token amount');
+        // Convert using token converter
+        convertSafe(_converter, _loanManagerAddress, _fromToken, address(token), amount);
 
-        // Convert _fromToken into RCN
-        convertSafe(_converter, _fromToken, address(token), amount, tokenCost, etherCost);
-
-        // Lend loan
-        require(token.safeApprove(_loanManagerAddress, tokenCost), 'Error approving lend token transfer');
         LoanManager(_loanManagerAddress).lend(
             _requestId, 
             _oracleData, 
@@ -120,6 +111,7 @@ contract ConverterRamp is Ownable {
         } else {
             return tokenConverter.getPrice(_fromToken, _token, _amount);
         }
+        
     }
 
     /*
@@ -129,21 +121,23 @@ contract ConverterRamp is Ownable {
     */
     function convertSafe(
         address _converter,
+        address _loanManagerAddress,
         address _fromToken,
         address _token,
-        uint256 _amount,
-        uint256 _tokenCost,
-        uint256 _etherCost
+        uint256 _amount
     ) internal returns (uint256 bought) {
+        
+        (uint256 tokenCost, uint256 etherCost) = getCost(_amount, _converter, _fromToken, address(_token));
         if (_fromToken == ETH_ADDRESS) {
-            ethConvertSafe(_converter, _fromToken, address(_token), _amount, _tokenCost, _etherCost);
+            ethConvertSafe(_converter, _fromToken, address(_token), _amount, tokenCost, etherCost);
         } else {
-            tokenConvertSafe(_converter, _fromToken, address(_token), _amount, _tokenCost, _etherCost);
+            tokenConvertSafe(_converter, _loanManagerAddress, _fromToken, address(_token), _amount, tokenCost, etherCost);
         }
     }
 
     function tokenConvertSafe(
         address _converter,
+        address _loanManagerAddress,
         address _fromTokenAddress,
         address _toTokenAddress,
         uint256 _amount,
@@ -154,6 +148,9 @@ contract ConverterRamp is Ownable {
         IERC20 fromToken = IERC20(_fromTokenAddress);
         IERC20 toToken = IERC20(_toTokenAddress);
         TokenConverter tokenConverter = TokenConverter(_converter);
+        
+        // pull tokens for convert
+        require(fromToken.safeTransferFrom(msg.sender, address(this), _tokenCost), 'Error pulling token amount');
 
         // safe approve tokens to tokenConverter
         require(fromToken.safeApprove(address(tokenConverter), _tokenCost), 'Error approving token transfer');
@@ -169,6 +166,10 @@ contract ConverterRamp is Ownable {
 
         // If we are converting from a token, remove the approve
         require(fromToken.safeApprove(address(tokenConverter), 0), 'Error removing token approve');
+
+        // approve token to loan manager
+        require(toToken.safeApprove(_loanManagerAddress, _tokenCost), 'Error approving lend token transfer');
+
     }
 
     function ethConvertSafe(
@@ -189,9 +190,6 @@ contract ConverterRamp is Ownable {
 
         // call convert in token converter
         tokenConverter.convert.value(_amount)(fromToken, toToken, _amount, _tokenCost, _etherCost, msg.sender);
-
-        // token balance should have increased by amount
-        require(_amount == address(this).balance - prevBalance, 'Bought amound does does not match');
 
     }
 

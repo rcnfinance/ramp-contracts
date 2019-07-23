@@ -6,7 +6,7 @@ interface IUniswapExchange{
     function getEthToTokenOutputPrice(uint256 tokensBought) external view returns (uint256);
     function getTokenToEthOutputPrice(uint256 tokensBought) external view returns (uint256);
 
-    function ethToTokenTransferOutput(uint256 minTokens, uint deadline) external payable returns (uint256);
+    function ethToTokenSwapOutput(uint256 minTokens, uint deadline) external payable returns (uint256);
     function tokenToTokenSwapOutput(uint256 tokensSold, uint256 minTokensBought, uint256 minEthBought, uint256 deadline, address tokenAddr) external returns (uint256  tokensBought);
 }
 
@@ -26,10 +26,9 @@ contract UniswapExchangeMock is IUniswapExchange {
         return tokensBought;
     }
 
-    function ethToTokenTransferOutput(uint256 minTokens, uint deadline) public payable returns (uint256) {
+    function ethToTokenSwapOutput(uint256 minTokens, uint deadline) public payable returns (uint256) {
         uint256 purchasedTokens = msg.value;
-        require(purchasedTokens >= minTokens,"couldnt get minTokens");
-        require(outputToken.transfer(msg.sender, purchasedTokens),"couldnt buy token");
+        require(outputToken.transfer(msg.sender, purchasedTokens), "couldnt buy token");
         return purchasedTokens;
     }
     function tokenToTokenSwapOutput(uint256 tokensSold, uint256 minTokensBought, uint256 minEthBought, uint256 deadline, address tokenAddr) external returns (uint256  tokensBought){

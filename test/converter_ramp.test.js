@@ -26,11 +26,6 @@ contract('ConverterRamp', function (accounts) {
     // converter
     let converterRamp;
 
-    // uniswap converter
-    let uniswapExchangeMock;
-    let uniswapFactoryMock;
-    let uniswapProxy;
-
     // oracle
     let oracle;
 
@@ -105,13 +100,6 @@ contract('ConverterRamp', function (accounts) {
 
         converterRamp = await ConverterRamp.new({ from: owner });
 
-        // Deploy uniswap
-        uniswapExchangeMock = await UniswapExchangeMock.new(simpleDestToken.address, simpleTestToken.address, { from: owner });
-        await simpleDestToken.mint(uniswapExchangeMock.address, INITIAL_BALANCE); // add liquity.
-        await simpleTestToken.mint(uniswapExchangeMock.address, INITIAL_BALANCE); // add liquity.
-        uniswapFactoryMock = await UniswapFactoryMock.new(uniswapExchangeMock.address, { from: owner });
-        uniswapProxy = await UniswapProxy.new(uniswapFactoryMock.address, { from: owner })
-
         // Deploy Diaspore
         debtEngine = await TestDebtEngine.new(simpleTestToken.address, { from: owner });
         loanManager = await TestLoanManager.new(debtEngine.address, { from: owner });
@@ -126,6 +114,12 @@ contract('ConverterRamp', function (accounts) {
 
         it('Should lend and pay using the ramp', async () => {
             
+            // Deploy uniswap
+            let uniswapExchangeMock = await UniswapExchangeMock.new(simpleDestToken.address, simpleTestToken.address, { from: owner });
+            await simpleTestToken.mint(uniswapExchangeMock.address, INITIAL_BALANCE); // add liquity.
+            let uniswapFactoryMock = await UniswapFactoryMock.new(uniswapExchangeMock.address, { from: owner });
+            let uniswapProxy = await UniswapProxy.new(uniswapFactoryMock.address, { from: owner })
+
             const amount = new BN(8);
             // mint simple test token (lender, payer)
             await simpleDestToken.mint(lender, amount);
@@ -205,6 +199,98 @@ contract('ConverterRamp', function (accounts) {
             expect(await simpleDestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
             expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
             
+        });
+    
+    });
+
+    describe('Pay and lend swap eth to token', function () {
+
+        it('Should lend and pay using the ramp', async () => {
+            
+            const ethAddress = await converterRamp.ETH_ADDRESS();
+
+            // Deploy uniswap
+            let uniswapExchangeMock = await UniswapExchangeMock.new(ethAddress, simpleTestToken.address, { from: owner });
+            await simpleTestToken.mint(uniswapExchangeMock.address, INITIAL_BALANCE); // add liquity.
+            let uniswapFactoryMock = await UniswapFactoryMock.new(uniswapExchangeMock.address, { from: owner });
+            let uniswapProxy = await UniswapProxy.new(uniswapFactoryMock.address, { from: owner })
+
+            const amount = new BN(8);
+            const salt = new BN(2);
+            const expiration = (await Helper.getBlockTime()) + 1000;
+            const loanData = await model.encodeData(amount, expiration);
+
+            const id = await calcId(
+                amount,
+                borrower,
+                borrower,
+                model.address,
+                Helper.address0x,
+                salt,
+                expiration,
+                loanData
+            );
+
+            const Requested = await Helper.toEvent(
+                loanManager.requestLoan(
+                    amount,            // Amount
+                    model.address,     // Model
+                    Helper.address0x,  // Oracle
+                    borrower,          // Borrower
+                    Helper.address0x,  // Callback
+                    salt,              // salt
+                    expiration,        // Expiration
+                    loanData,          // Loan data
+                    { from: borrower } // Creator
+                ),
+                'Requested'
+            );
+            assert.equal(Requested._id, id);
+            const loanId = Helper.toBytes32(id)
+
+            const sendEth = await converterRamp.getCost(
+                amount, 
+                uniswapProxy.address, 
+                ethAddress, 
+                simpleTestToken.address
+            );
+            const ethCost = sendEth[1];
+
+            await converterRamp.lend(
+                uniswapProxy.address,
+                ethAddress,
+                loanManager.address,
+                Helper.address0x,
+                debtEngine.address,
+                loanId,
+                [],
+                [],
+                [],
+                { 
+                    from: lender,
+                    value: ethCost
+                }
+            )
+
+            expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+            assert.equal(await loanManager.ownerOf(loanId), lender);
+
+            await converterRamp.pay(
+                uniswapProxy.address,
+                ethAddress,
+                loanManager.address,
+                debtEngine.address,
+                payer,
+                loanId,
+                [],
+                { 
+                    from: payer,
+                    value: ethCost
+                }
+            );
+
+            expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+
         });
     
     });
