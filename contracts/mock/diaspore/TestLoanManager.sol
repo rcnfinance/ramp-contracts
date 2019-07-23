@@ -116,6 +116,9 @@ contract TestLoanManager is BytesUtils {
         address oracle = requests[bytes32(_id)].oracle;
         return oracle == address(0) ? bytes32(0x0) : TestRateOracle(oracle).currency();
     }
+    function ownerOf(uint256 _id) external view returns (address) {
+        return debtEngine.ownerOf(_id);
+    }
     function getAmount(uint256 _id) external view returns (uint256) { return requests[bytes32(_id)].amount; }
     function getExpirationRequest(uint256 _id) external view returns (uint256) { return requests[bytes32(_id)].expiration; }
     function getApproved(uint256 _id) external view returns (bool) { return requests[bytes32(_id)].approved; }
