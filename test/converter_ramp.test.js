@@ -100,15 +100,8 @@ contract('ConverterRamp', function (accounts) {
         
         // Deploy simple test token
         simpleTestToken = await TestTokenMock.new('Test token', 'TEST', 18, { from: owner });
-        await simpleTestToken.mint(borrower, INITIAL_BALANCE);
-        await simpleTestToken.mint(lender, INITIAL_BALANCE);
-        await simpleTestToken.mint(payer, INITIAL_BALANCE);
-        await simpleTestToken.mint(signer, INITIAL_BALANCE);
-
         // Deploy simple dest token
         simpleDestToken = await TestTokenMock.new('Dest token', 'DEST', 18, { from: owner });
-        await simpleDestToken.mint(lender, INITIAL_BALANCE);
-        await simpleDestToken.mint(payer, INITIAL_BALANCE);
 
         converterRamp = await ConverterRamp.new({ from: owner });
 
@@ -127,89 +120,93 @@ contract('ConverterRamp', function (accounts) {
         // Deploy oracle
         oracle = await TestRateOracle.new();
 
-
     });
 
-    it('Should lend and pay using the ramp (uniswap)', async () => {
+    describe('Pay and lend swap token to token', function () {
+
+        it('Should lend and pay using the ramp', async () => {
+            
+            const amount = new BN(8);
+            // mint simple test token (lender, payer)
+            await simpleDestToken.mint(lender, amount);
+            await simpleDestToken.mint(payer, amount);
+            
+            const salt = new BN(1);
+            const expiration = (await Helper.getBlockTime()) + 1000;
+            const loanData = await model.encodeData(amount, expiration);
+
+            const id = await calcId(
+                amount,
+                borrower,
+                borrower,
+                model.address,
+                oracle.address,
+                salt,
+                expiration,
+                loanData
+            );
+
+            const Requested = await Helper.toEvent(
+                loanManager.requestLoan(
+                    amount,            // Amount
+                    model.address,     // Model
+                    oracle.address,    // Oracle
+                    borrower,          // Borrower
+                    Helper.address0x,  // Callback
+                    salt,              // salt
+                    expiration,        // Expiration
+                    loanData,          // Loan data
+                    { from: borrower } // Creator
+                ),
+                'Requested'
+            );
+            assert.equal(Requested._id, id);
+            const loanId = Helper.toBytes32(id)
+
+            expect(await loanManager.getAmount(loanId)).to.be.bignumber.equal(amount);
+
+            const tokens = new BN(1);
+            const equivalent = new BN(1);
+            
+            await simpleDestToken.approve(converterRamp.address, amount, { from: lender });
+            const oracleData = await oracle.encodeRate(tokens, equivalent);
+    
+            await converterRamp.lend(
+                uniswapProxy.address,
+                simpleDestToken.address,
+                loanManager.address,
+                Helper.address0x,
+                debtEngine.address,
+                loanId,
+                oracleData,
+                [],
+                [],
+                { from: lender }
+            )
+            
+            expect(await simpleDestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+            expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
         
-        // Deploy diaspore and request lend
-        const salt = new BN(1);
-        const amount = new BN(8);
-        const expiration = (await Helper.getBlockTime()) + 1000;
-        const loanData = await model.encodeData(amount, expiration);
+            assert.equal(await loanManager.ownerOf(loanId), lender);
 
-        const id = await calcId(
-            amount,
-            borrower,
-            borrower,
-            model.address,
-            oracle.address,
-            salt,
-            expiration,
-            loanData
-        );
+            await simpleDestToken.approve(converterRamp.address, amount, { from: payer });
 
+            await converterRamp.pay(
+                uniswapProxy.address,
+                simpleDestToken.address,
+                loanManager.address,
+                debtEngine.address,
+                payer,
+                loanId,
+                oracleData,
+                { from: payer }
+            );
 
-        const Requested = await Helper.toEvent(
-            loanManager.requestLoan(
-                amount,         // Amount
-                model.address,     // Model
-                oracle.address,    // Oracle
-                borrower,          // Borrower
-                Helper.address0x,  // Callback
-                salt,              // salt
-                expiration,        // Expiration
-                loanData,          // Loan data
-                { from: borrower } // Creator
-            ),
-            'Requested'
-        );
-        assert.equal(Requested._id, id);
-        const loanId = Helper.toBytes32(id)
-
-        expect(await loanManager.getAmount(loanId)).to.be.bignumber.equal(amount);
-
-        const tokens = new BN(1);
-        const equivalent = new BN(1);
-        
-        await simpleDestToken.approve(converterRamp.address, amount, { from: lender });
-        const oracleData = await oracle.encodeRate(tokens, equivalent);
-
-                
-        await converterRamp.lend(
-            uniswapProxy.address,
-            simpleDestToken.address,
-            loanManager.address,
-            Helper.address0x,
-            debtEngine.address,
-            loanId,
-            oracleData,
-            [],
-            [],
-            { from: lender }
-        )
-        
-        expect(await simpleDestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
-        expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
-       
-        assert.equal(await loanManager.ownerOf(loanId), lender);
-
-        await simpleDestToken.approve(converterRamp.address, amount, { from: payer });
-
-        await converterRamp.pay(
-            uniswapProxy.address,
-            simpleDestToken.address,
-            loanManager.address,
-            debtEngine.address,
-            payer,
-            loanId,
-            oracleData,
-            { from: payer }
-        );
-
-        expect(await simpleDestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
-        expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
-        
+            expect(await simpleDestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+            expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+            
+        });
+    
     });
 
 });
