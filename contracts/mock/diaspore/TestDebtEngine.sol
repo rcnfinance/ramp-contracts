@@ -52,8 +52,21 @@ contract TestDebtEngine is ERC721Base {
         address _oracle,
         uint256 _salt,
         bytes calldata _data
-    ) external returns (bytes32) {
-        return 0x0;
+    ) external returns (bytes32 id) {
+        id = keccak256(
+            abi.encodePacked(
+                uint8(2),
+                address(this),
+                msg.sender,
+                _model,
+                _oracle,
+                _salt,
+                _data
+            )
+        );
+
+        _generate(uint256(id), _owner);
+        
     }
 
     function pay(
