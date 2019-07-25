@@ -25,9 +25,6 @@ contract ConverterRamp is Ownable {
     event Return(address _token, address _to, uint256 _amount);
     event ReadedOracle(address _oracle, uint256 _tokens, uint256 _equivalent);
 
-    function() external payable {
-        require(msg.value > 0, 'The value is 0.');
-    }
     
     /// @notice pays a loan using _fromTokens
     /// @param _converter converter to use for swap (uniswap, kyber, bancor, etc)
@@ -277,5 +274,7 @@ contract ConverterRamp is Ownable {
         emit ReadedOracle(_oracle, tokens, equivalent);
         return tokens.mul(_amount) / equivalent;
     }
+
+    function() external payable {}
 
 }
