@@ -1,5 +1,5 @@
 {
-  "name": "Ramps",
+  "name": "ramps",
   "version": "1.0.0",
   "license": "MIT",
   "description": "Ramps allow lend and pay to be made with any ERC-20 token while the Diaspore contract receiving RCN their token using pooled liquidity.",
@@ -54,6 +54,8 @@
     "openzeppelin-test-helpers": "0.4.0",
     "solhint": "2.1.0",
     "rp-solidity-coverage": "^0.5.13",
+    "truffle": "^5.0.20",
+    "truffle-hdwallet-provider": "0.0.5",
     "web3": "1.0.0-beta.55"
   }
 }
