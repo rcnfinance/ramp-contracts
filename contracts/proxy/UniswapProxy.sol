@@ -86,8 +86,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         
         (
             uint256 tokenCost, 
-            uint256 etherCost, 
-            UniswapExchangeInterface exchange
+            uint256 etherCost,
         ) = price(address(_token), address(_outToken), _amount);
 
         return (tokenCost, etherCost);
@@ -102,7 +101,6 @@ contract UniswapProxy is TokenConverter, Ownable {
         
         (
             uint256 etherCost,
-            UniswapExchangeInterface exchange
         ) = price(address(_outToken), _amount);
         
         return (0, etherCost);
