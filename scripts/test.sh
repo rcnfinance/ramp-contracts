@@ -26,9 +26,9 @@ ganache_running() {
 start_ganache() {
 
   if [ "$SOLIDITY_COVERAGE" = true ]; then
-    npx ganache-cli-coverage --emitFreeLogs true --allowUnlimitedContractSize true --gasLimit 0xfffffffffff --port "$ganache_port" > /dev/null &
+    npx macaron-cli --emitFreeLogs true --gasLimit 0xfffffffffffff --allowUnlimitedContractSize true --debugTopics ./.solidity_coverage/.source_topics --dumpLogs ./.solidity_coverage/.all_events --port "$ganache_port" &
   else
-    npx ganache-cli --gasLimit 0xfffffffffff --port "$ganache_port" > /dev/null &
+    npx macaron-cli --gasLimit 0xfffffffffff --port "$ganache_port" > /dev/null &
   fi
 
   ganache_pid=$!
