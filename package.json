@@ -1,8 +1,8 @@
 {
-  "name": "RAMPS-Diaspore",
+  "name": "Ramps",
   "version": "1.0.0",
   "license": "MIT",
-  "description": "ConvertRamp allow lend and pay to be made with any ERC-20 token while the Diaspore contract receiving RCN their token using pooled liquidity.",
+  "description": "Ramps allow lend and pay to be made with any ERC-20 token while the Diaspore contract receiving RCN their token using pooled liquidity.",
   "files": [
     "build",
     "contracts",
@@ -39,9 +39,8 @@
     "openzeppelin-solidity": "2.3.0"
   },
   "devDependencies": {
-    "openzeppelin-test-helpers": "0.4.0",
-    "coveralls": "^3.0.1",
     "chai": "^4.2.0",
+    "coveralls": "^3.0.1",
     "eslint": "^4.19.1",
     "eslint-config-standard": "^10.2.1",
     "eslint-plugin-import": "^2.13.0",
@@ -50,12 +49,11 @@
     "eslint-plugin-promise": "^3.8.0",
     "eslint-plugin-standard": "^3.1.0",
     "ethjs-abi": "^0.2.1",
-    "ganache-cli": "^6.4.1",
-    "ganache-cli-coverage": "https://github.com/frangio/ganache-cli/releases/download/v6.4.1-coverage/ganache-cli-coverage-6.4.1.tgz",
+    "ganache-cli": "^6.4.3",
+    "macaron-cli": "^6.4.1",
+    "openzeppelin-test-helpers": "0.4.0",
     "solhint": "2.1.0",
-    "solidity-coverage": "github:rotcivegaf/solidity-coverage#5875f5b7bc74d447f3312c9c0e9fc7814b482477",
-    "truffle": "^5.0.0",
-    "truffle-hdwallet-provider": "0.0.5",
+    "rp-solidity-coverage": "^0.5.13",
     "web3": "1.0.0-beta.55"
   }
 }
