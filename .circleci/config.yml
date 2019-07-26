@@ -148,7 +148,7 @@ jobs:
                 command: ./node_modules/.bin/eslint .
 
     # The lint-solidity job
-    # TODO:
+    # TODO: (jpgonzalezra)
 
 workflows:
     version: 2
@@ -171,3 +171,4 @@ workflows:
             #- lint-solidity:
             #   requires:
             #        - install
+            # TODO: (jpgonzalezra)
