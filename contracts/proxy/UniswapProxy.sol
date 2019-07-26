@@ -1,5 +1,4 @@
 import './../interfaces/token/TokenConverter.sol';
-import './../interfaces/uniswap/Uniswap.sol';
 import './../interfaces/uniswap/UniswapFactoryInterface.sol';
 import './../interfaces/uniswap/UniswapExchangeInterface.sol';
 import './../safe/SafeERC20.sol';
