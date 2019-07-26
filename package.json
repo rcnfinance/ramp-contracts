@@ -34,14 +34,13 @@
   },
   "homepage": "https://ripiocredit.network",
   "dependencies": {
-    "web3": "1.0.0-beta.37",
+    "web3": "1.2.0",
     "openzeppelin-solidity": "2.3.0"
   },
   "devDependencies": {
     "chai": "^4.2.0",
     "coveralls": "^3.0.1",
     "eslint": "^4.19.1",
-    "openzeppelin-test-helpers": "0.4.0",
     "eslint-config-standard": "^10.2.1",
     "eslint-plugin-import": "^2.13.0",
     "eslint-plugin-mocha-no-only": "^1.1.0",

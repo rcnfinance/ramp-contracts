@@ -11,8 +11,10 @@ const TestDebtEngine = artifacts.require('./mock/diaspore/TestDebtEngine.sol');
 const TestLoanManager = artifacts.require('./mock/diaspore/TestLoanManager.sol');
 const TestRateOracle = artifacts.require('./utils/test/TestRateOracle.sol');
 
-const { BN } = require('openzeppelin-test-helpers');
 const Helper = require('./helper/Helper.js');
+const BN = web3.utils.BN;
+const chai = require('chai');
+chai.use(require('chai-bn')(BN));
 const { expect } = require('chai');
 
 contract('ConverterRamp', function (accounts) {
