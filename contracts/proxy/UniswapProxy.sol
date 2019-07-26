@@ -1,7 +1,8 @@
-import "./../interfaces/token/TokenConverter.sol";
-import "./../interfaces/uniswap/Uniswap.sol";
-import "./../safe/SafeERC20.sol";
-import "./../safe/SafeExchange.sol";
+import './../interfaces/token/TokenConverter.sol';
+import './../interfaces/uniswap/UniswapFactoryInterface.sol';
+import './../interfaces/uniswap/UniswapExchangeInterface.sol';
+import './../safe/SafeERC20.sol';
+import './../safe/SafeExchange.sol';
 import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
 import 'openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
 import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';

@@ -1,6 +1,6 @@
-# ConvertRamp
+# Ramps
 
-ConvertRamp allow lend and pay to be made with any ERC-20 token while the Diaspore contract receiving RCN their token using pooled liquidity.
+Ramps allow lend and pay to be made with any ERC-20 token while the Diaspore contract receiving RCN their token using pooled liquidity.
 
 TokenConverter accepts tokens and ether, converts these to the RCN token, and makes corresponding call.
 
