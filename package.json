@@ -11,13 +11,14 @@
   ],
   "scripts": {
     "console": "truffle console",
-    "coverage": "bin/coverage.sh",
+    "compile": "scripts/compile.sh",
+    "coverage": "scripts/coverage.sh",
     "lint": "npm run lint:js && npm run lint:sol",
     "lint:fix": "npm run lint:js:fix",
     "lint:js": "eslint .",
     "lint:js:fix": "eslint . --fix",
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
-    "test": "bin/test.sh"
+    "test": "scripts/test.sh"
   },
   "repository": {
     "type": "git",
@@ -35,6 +36,7 @@
   },
   "homepage": "https://ripiocredit.network",
   "dependencies": {
+    "web3": "1.0.0-beta.37",
     "openzeppelin-solidity": "2.3.0"
   },
   "devDependencies": {
@@ -53,7 +55,7 @@
     "openzeppelin-test-helpers": "0.4.0",
     "solhint": "2.1.0",
     "rp-solidity-coverage": "^0.5.13",
-    "truffle": "^5.0.20",
+    "truffle": "^5.0.3",
     "truffle-hdwallet-provider": "0.0.5"
   }
 }
