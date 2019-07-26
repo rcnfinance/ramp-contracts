@@ -163,9 +163,10 @@ workflows:
             - test:
                 requires:
                     - install
-            - coverage:
-                requires:
-                    - install
+            #- coverage:
+            #    requires:
+            #        - install
+            # TODO: (jpgonzalezra)
             - lint-javascript:
                 requires:
                     - install
