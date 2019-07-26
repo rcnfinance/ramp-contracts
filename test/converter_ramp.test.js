@@ -11,7 +11,7 @@ const TestDebtEngine = artifacts.require('./mock/diaspore/TestDebtEngine.sol');
 const TestLoanManager = artifacts.require('./mock/diaspore/TestLoanManager.sol');
 const TestRateOracle = artifacts.require('./utils/test/TestRateOracle.sol');
 
-const Helper = require('./helper/Helper.js');
+const Helper = require('./common/helper.js');
 const BN = web3.utils.BN;
 const chai = require('chai');
 chai.use(require('chai-bn')(BN));
