@@ -28,7 +28,7 @@ contract UniswapProxy is TokenConverter, Ownable {
     IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
     /// @notice registry of ERC20 tokens that have been added to the system 
-    ///         and the exchange with which they are associated.
+    ///         and the exchange to which they are associated.
     UniswapFactoryInterface factory;
 
     constructor (address _uniswapFactory) public {
@@ -36,7 +36,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         emit SetUniswap(_uniswapFactory);
     }
     
-    /// @notice get price for swap token to another token
+    /// @notice get price to swap token to another token
     /// @return _tokenCost, _etherCost, _inExchange
     /// @dev  internal method.
     function price(
@@ -55,7 +55,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         return (tokenCost, etherCost, inExchange);
     }
 
-    /// @notice get price for swap eth to token
+    /// @notice get price to swap eth to token
     /// @return _etherCost, _exchange
     /// @dev  internal method.
     function price(
@@ -116,7 +116,7 @@ contract UniswapProxy is TokenConverter, Ownable {
     /// @param _amount amount of source tokens
     /// @param _tokenCost amount of source _tokenCost
     /// @param _etherCost amount of source _etherCost
-    /// @param _origin address to transfer exceding eth
+    /// @param _origin address to transfer leftover eth
     /// @dev _origin and _recipient can be different.
     function convert(
         IERC20 _inToken,
@@ -144,7 +144,7 @@ contract UniswapProxy is TokenConverter, Ownable {
     /// @param _amount amount of source tokens
     /// @param _etherCost amount of source _etherCost
     /// @param _recipient address to send swapped tokens to
-    /// @param _origin address to transfer exceding eth
+    /// @param _origin address to transfer leftover eth
     function execSwapEtherToToken(
         IERC20 _outToken, 
         uint _amount,
