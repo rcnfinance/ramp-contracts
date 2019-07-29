@@ -11,7 +11,7 @@ import './interfaces/RateOracle.sol';
 import './safe/SafeERC20.sol';
 
 /// @title  Converter Ramp
-/// @notice Conversion ramp between ERC20 to RCN, use TokenConverter 
+/// @notice for conversion between different assets, use TokenConverter 
 ///         contract as abstract layer for convert different assets.
 /// @dev All function calls are currently implemented without side effects
 contract ConverterRamp is Ownable {
@@ -27,7 +27,7 @@ contract ConverterRamp is Ownable {
 
     
     /// @notice pays a loan using _fromTokens
-    /// @param _converter converter to use for swap (uniswap, kyber, bancor, etc)
+    /// @param _converter converter to use for swapping (uniswap, kyber, bancor, etc)
     /// @param _fromToken token address to convert
     /// @param _loanManagerAddress address of diaspore LoanManagaer
     /// @param _debtEngineAddress address of diaspore LoanManagaer 
@@ -54,7 +54,7 @@ contract ConverterRamp is Ownable {
             _oracleData
         );
         
-        /// convert using token cconverter
+        /// converter using token converter
         convertSafe(_converter, _loanManagerAddress, _fromToken, address(token), amount);
 
         /// pay loan
@@ -67,7 +67,7 @@ contract ConverterRamp is Ownable {
     }
 
     /// @notice Lends a loan using fromTokens, transfer loan ownership to msg.sender
-    /// @param _converter converter to use for swap (uniswap, kyber, bancor, etc)
+    /// @param _converter converter to use for swapping (uniswap, kyber, bancor, etc)
     /// @param _fromToken token address to convert
     /// @param _loanManagerAddress address of diaspore LoanManagaer
     /// @param _lenderCosignerAddress address of diaspore Cosigner 
@@ -120,12 +120,12 @@ contract ConverterRamp is Ownable {
 
     }
 
-    /// @notice get the cost, in wei, of making a payment of the specified value 
-    ///         in this contract's configured payment token.
+    /// @notice get the cost, in wei, of making a convertion using the value specified.
     /// @param _amount amount to calculate cost
     /// @param _converter converter to use for swap
     /// @param _fromToken token to convert
     /// @param _token RCN token address
+    /// @return _tokenCost and _etherCost
     function getCost(uint _amount, address _converter, address _fromToken, address _token) public view returns (uint256, uint256)  {
     
         TokenConverter tokenConverter = TokenConverter(_converter);
@@ -171,13 +171,13 @@ contract ConverterRamp is Ownable {
         IERC20 toToken = IERC20(_toTokenAddress);
         TokenConverter tokenConverter = TokenConverter(_converter);
         
-        /// pull tokens for convert
+        /// pull tokens to convert
         require(fromToken.safeTransferFrom(msg.sender, address(this), _tokenCost), 'Error pulling token amount');
 
         /// safe approve tokens to tokenConverter
         require(fromToken.safeApprove(address(tokenConverter), _tokenCost), 'Error approving token transfer');
 
-        /// store the previus balance to validate after convertion
+        /// store the previus balance after conversion to validate
         uint256 prevBalance = toToken.balanceOf(address(this));
 
         /// call convert in token converter
@@ -209,7 +209,7 @@ contract ConverterRamp is Ownable {
         IERC20 toToken = IERC20(_toTokenAddress);
         TokenConverter tokenConverter = TokenConverter(_converter);
 
-        /// store the previus balance to validate after convertion
+        /// store the previus balance after conversion to validate
         uint256 prevBalance = address(this).balance;
 
         /// call convert in token converter
