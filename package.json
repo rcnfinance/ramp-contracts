@@ -1,20 +1,22 @@
 {
-  "name": "RAMPS-Diaspore",
+  "name": "ramps",
   "version": "1.0.0",
-  "description": "",
+  "license": "MIT",
+  "description": "Ramps allow lend and pay to be made with any ERC-20 token while the Diaspore contract receiving RCN their token using pooled liquidity.",
   "files": [
     "build",
     "contracts",
-    "test"
+    "test",
+    "!contracts/mocks"
   ],
   "scripts": {
+    "console": "truffle console",
+    "lint": "npm run lint:js && npm run lint:sol",
+    "lint:fix": "npm run lint:js:fix",
     "lint:js": "eslint .",
     "lint:js:fix": "eslint . --fix",
-    "lint:sol": "solium -d .",
-    "lint:sol:fix": "solium -d . --fix",
-    "lint": "npm run lint:js && npm run lint:sol",
-    "lint:fix": "npm run lint:js:fix && npm run lint:sol:fix",
-    "console": "truffle console"
+    "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
+    "test": "scripts/test.sh"
   },
   "repository": {
     "type": "git",
@@ -32,26 +34,26 @@
   },
   "homepage": "https://ripiocredit.network",
   "dependencies": {
-    "openzeppelin-solidity": "2.3.0",
+    "web3": "1.2.0",
+    "openzeppelin-solidity": "2.3.0"
   },
   "devDependencies": {
-    "openzeppelin-test-helpers": "0.4.0",
-    "ethlint": "^1.2.0",
     "chai": "^4.2.0",
-    "bn-chai": "^1.0.1",
-    "bn.js": "^4.11.8",
-    "chai": "^4.2.0",
+    "chai-bn": "^0.1.1",
+    "coveralls": "^3.0.1",
     "eslint": "^4.19.1",
     "eslint-config-standard": "^10.2.1",
     "eslint-plugin-import": "^2.13.0",
+    "eslint-plugin-mocha-no-only": "^1.1.0",
     "eslint-plugin-node": "^5.2.1",
     "eslint-plugin-promise": "^3.8.0",
     "eslint-plugin-standard": "^3.1.0",
     "ethjs-abi": "^0.2.1",
-    "ganache-cli": "^6.1.8",
-    "solium": "^1.1.8",
-    "truffle": "^5.0.0",
-    "truffle-hdwallet-provider": "0.0.5",
-    "web3": "1.0.0-beta.55"
+    "ganache-cli": "^6.4.3",
+    "macaron-cli": "^6.4.1",
+    "solhint": "2.1.0",
+    "rp-solidity-coverage": "^0.5.13",
+    "truffle": "^5.0.3",
+    "truffle-hdwallet-provider": "0.0.5"
   }
 }
