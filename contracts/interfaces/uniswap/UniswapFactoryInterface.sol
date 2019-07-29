@@ -1,16 +1,16 @@
 pragma solidity 0.5.10;
 
-// https://docs.uniswap.io/smart-contract-integration/interface
+/// https://docs.uniswap.io/smart-contract-integration/interface
 contract UniswapFactoryInterface {
-    // Public Variables
+    /// Public Variables
     address public exchangeTemplate;
     uint256 public tokenCount;
-    // Create Exchange
+    /// Create Exchange
     function createExchange(address token) external returns (address exchange);
-    // Get Exchange and Token Info
+    /// Get Exchange and Token Info
     function getExchange(address token) external view returns (address exchange);
     function getToken(address exchange) external view returns (address token);
     function getTokenWithId(uint256 tokenId) external view returns (address token);
-    // Never use
+    /// Never use
     function initializeFactory(address template) external;
 }

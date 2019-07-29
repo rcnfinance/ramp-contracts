@@ -2,7 +2,8 @@ pragma solidity ^0.5.2;
  
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./../interfaces/uniswap/uniswap.sol";
+import './../interfaces/uniswap/UniswapFactoryInterface.sol';
+import './../interfaces/uniswap/UniswapExchangeInterface.sol';
 
 library SafeExchange {
     using SafeMath for uint256;
