@@ -1,6 +1,6 @@
 pragma solidity 0.5.10;
 
-import 'openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
 interface IUniswapExchange{
     function getEthToTokenOutputPrice(uint256 tokensBought) external view returns (uint256);
@@ -10,6 +10,7 @@ interface IUniswapExchange{
     function tokenToTokenSwapOutput(uint256 tokensSold, uint256 minTokensBought, uint256 minEthBought, uint256 deadline, address tokenAddr) external returns (uint256  tokensBought);
 }
 
+
 contract UniswapExchangeMock is IUniswapExchange {
     IERC20 inputToken;
     IERC20 outputToken;
@@ -18,6 +19,7 @@ contract UniswapExchangeMock is IUniswapExchange {
         inputToken = IERC20(inputTokenAddress);
         outputToken = IERC20(outputTokenAddress);
     }
+
     function getEthToTokenOutputPrice(uint256 tokensBought) external view returns (uint256) {
         return tokensBought;
     }
@@ -31,6 +33,7 @@ contract UniswapExchangeMock is IUniswapExchange {
         require(outputToken.transfer(msg.sender, purchasedTokens), "couldnt buy token");
         return purchasedTokens;
     }
+
     function tokenToTokenSwapOutput(uint256 tokensSold, uint256 minTokensBought, uint256 minEthBought, uint256 deadline, address tokenAddr) external returns (uint256  tokensBought){
         require(address(outputToken) == tokenAddr, "token not supported");
         require(minTokensBought <= tokensSold, "not enough tokens supplied");

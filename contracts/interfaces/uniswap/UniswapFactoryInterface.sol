@@ -1,5 +1,6 @@
 pragma solidity 0.5.10;
 
+
 /// https://docs.uniswap.io/smart-contract-integration/interface
 contract UniswapFactoryInterface {
     /// Public Variables

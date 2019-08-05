@@ -3,6 +3,7 @@ pragma solidity ^0.5.10;
 import "./../../common/ERC165.sol";
 import "../../common/BytesUtils.sol";
 
+
 contract RateOracle is IERC165 {
     uint256 public constant VERSION = 5;
     bytes4 internal constant RATE_ORACLE_INTERFACE = 0xa265d8e0;
@@ -51,6 +52,7 @@ contract RateOracle is IERC165 {
     */
     function readSample(bytes calldata _data) external returns (uint256 _tokens, uint256 _equivalent);
 }
+
 
 contract TestRateOracle is BytesUtils, ERC165, RateOracle {
     uint256 public constant VERSION = 5;

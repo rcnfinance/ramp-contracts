@@ -1,7 +1,7 @@
 pragma solidity ^0.5.10;
 
-import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
-import 'openzeppelin-solidity/contracts/utils/Address.sol';
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/utils/Address.sol";
 import "./ERC165.sol";
 
 

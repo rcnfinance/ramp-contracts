@@ -1,13 +1,14 @@
 pragma solidity ^0.5.10;
 
-import 'openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
-import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
-import 'openzeppelin-solidity/contracts/utils/Address.sol';
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/utils/Address.sol";
 
 import "./../../mock/diaspore/TestRateOracle.sol";
 import "./../../mock/diaspore/TestModel.sol";
 import "./../../common/BytesUtils.sol";
 import "./TestDebtEngine.sol";
+
 
 library ImplementsInterface {
     bytes4 constant InvalidID = 0xffffffff;
@@ -54,6 +55,7 @@ library ImplementsInterface {
         }
     }
 }
+
 
 contract TestLoanManager is BytesUtils {
     using ImplementsInterface for address;
@@ -116,9 +118,11 @@ contract TestLoanManager is BytesUtils {
         address oracle = requests[bytes32(_id)].oracle;
         return oracle == address(0) ? bytes32(0x0) : TestRateOracle(oracle).currency();
     }
+
     function ownerOf(uint256 _id) external view returns (address) {
         return debtEngine.ownerOf(_id);
     }
+
     function getAmount(uint256 _id) external view returns (uint256) { return requests[bytes32(_id)].amount; }
     function getExpirationRequest(uint256 _id) external view returns (uint256) { return requests[bytes32(_id)].expiration; }
     function getApproved(uint256 _id) external view returns (bool) { return requests[bytes32(_id)].approved; }
@@ -135,6 +139,7 @@ contract TestLoanManager is BytesUtils {
         address oracle = requests[_id].oracle;
         return oracle == address(0) ? bytes32(0x0) : TestRateOracle(oracle).currency();
     }
+
     function getAmount(bytes32 _id) external view returns (uint256) { return requests[_id].amount; }
     function getExpirationRequest(bytes32 _id) external view returns (uint256) { return requests[_id].expiration; }
     function getApproved(bytes32 _id) external view returns (bool) { return requests[_id].approved; }
@@ -375,7 +380,7 @@ contract TestLoanManager is BytesUtils {
         emit Lent(_id, msg.sender, tokens);
 
         // Generate the debt
-        
+
         debtEngine.create2(
             request.model,
             msg.sender,

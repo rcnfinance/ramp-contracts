@@ -1,7 +1,8 @@
 pragma solidity ^0.5.10;
 
-import 'openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
-import './../../common/ERC721Base.sol';
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "./../../common/ERC721Base.sol";
+
 
 contract TestDebtEngine is ERC721Base {
 
@@ -66,7 +67,7 @@ contract TestDebtEngine is ERC721Base {
         );
 
         _generate(uint256(id), _owner);
-        
+
     }
 
     function pay(
@@ -75,7 +76,7 @@ contract TestDebtEngine is ERC721Base {
         address _origin,
         bytes calldata _oracleData
     ) external returns (uint256 paid, uint256 paidToken) {
-        
+
         // Pull tokens from payer
         require(token.transferFrom(msg.sender, address(this), _amount), "Error pulling payment tokens");
 
