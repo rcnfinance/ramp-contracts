@@ -53,6 +53,7 @@
     "macaron-cli": "^6.4.1",
     "solhint": "2.1.0",
     "rp-solidity-coverage": "^0.5.13",
+    "solium": "^1.2.4",
     "truffle": "^5.0.3",
     "truffle-hdwallet-provider": "0.0.5"
   }
