@@ -204,11 +204,15 @@ contract ConverterRamp is Ownable {
         TokenConverter tokenConverter = TokenConverter(_converter);
 
         /// store the previus balance after conversion to validate
-        uint256 prevBalance = address(this).balance;
+        uint256 prevEthBal = address(this).balance - msg.value;
 
         /// call convert in token converter
         tokenConverter.convert.value(_amount)(fromToken, toToken, _amount, _tokenCost, _etherCost, msg.sender);
 
+        /// give back the surplus if the sender send more eth
+        uint256 surplus = address(this).balance - prevEthBal;
+        if (surplus != 0)
+            msg.sender.transfer(surplus);
     }
 
     /// @notice returns how much RCN is required for a given lend
