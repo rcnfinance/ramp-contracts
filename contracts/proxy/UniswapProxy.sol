@@ -159,7 +159,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         exchange.swapEther(_amount, _etherCost, block.timestamp + 1, _outToken);
 
         require(_outToken.safeTransfer(_recipient, _amount), "error transfer tokens"); 
-        // Return any exceding ETH, if any
+        // Return leftover eth
         _origin.transfer(msg.value.sub(_etherCost));
     }
 
