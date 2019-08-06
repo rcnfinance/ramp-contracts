@@ -13,15 +13,12 @@ interface TokenConverter {
     /// @param _amount amount of source tokens
     /// @param _tokenCost amount of source _tokenCost
     /// @param _etherCost amount of source _etherCost
-    /// @param _origin address to transfer leftover eth
-    /// @dev _origin and _recipient can be different.
     function convert(
         IERC20 _inToken,
         IERC20 _outToken,
         uint256 _amount,
         uint256 _tokenCost,
-        uint256 _etherCost,
-        address payable _origin
+        uint256 _etherCost
     ) external payable;
 
     /// @notice get the cost, in wei, of making a convertion using the value specified.
