@@ -60,10 +60,11 @@ contract ConverterRamp is Ownable {
         /// pay loan
         DebtEngine debtEngine = DebtEngine(_debtEngineAddress);
         require(token.safeApprove(_debtEngineAddress, amount), "error on payment approve");
+        uint256 prevTokenBal = token.balanceOf(address(this));
         debtEngine.pay(_requestId, amount, _payFrom, _oracleData);
-        
+
         require(token.approve(_debtEngineAddress, 0), "error removing the payment approve");
-        require(token.balanceOf(address(this)) == 0, "the contract balance should be zero");  
+        require(token.balanceOf(address(this)) == prevTokenBal - amount, "the contract balance should be the previous");
     }
 
     /// @notice Lends a loan using fromTokens, transfer loan ownership to msg.sender
@@ -103,6 +104,8 @@ contract ConverterRamp is Ownable {
         /// convert using token converter
         convertSafe(_converter, _loanManagerAddress, _fromToken, address(token), amount);
 
+        uint256 prevTokenBal = token.balanceOf(address(this));
+
         LoanManager(_loanManagerAddress).lend(
             _requestId, 
             _oracleData, 
@@ -112,11 +115,12 @@ contract ConverterRamp is Ownable {
             _callbackData
         );
         
-        /// transfer loan to msg.sender
-        DebtEngine(_debtEngineAddress).transferFrom(address(this), msg.sender, uint256(_requestId));
 
         require(token.safeApprove(_loanManagerAddress, 0), 'error removing approve');
-        require(token.balanceOf(address(this)) == 0, 'the contract balance should be zero');
+        require(token.balanceOf(address(this)) == prevTokenBal - amount, "the contract balance should be the previous");
+
+        /// transfer loan to msg.sender
+        DebtEngine(_debtEngineAddress).transferFrom(address(this), msg.sender, uint256(_requestId));
 
     }
 
@@ -274,7 +278,4 @@ contract ConverterRamp is Ownable {
         emit ReadedOracle(_oracle, tokens, equivalent);
         return tokens.mul(_amount) / equivalent;
     }
-
-    function() external payable {}
-
 }
