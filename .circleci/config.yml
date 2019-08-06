@@ -170,7 +170,7 @@ workflows:
             - lint-javascript:
                 requires:
                     - install
-            #- lint-solidity:
-            #   requires:
-            #        - install
-            # TODO: (jpgonzalezra)
+            - lint-solidity:
+               requires:
+                    - install
+            

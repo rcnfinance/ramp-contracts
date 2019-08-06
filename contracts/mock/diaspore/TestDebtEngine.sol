@@ -1,7 +1,7 @@
 pragma solidity ^0.5.10;
 
-import 'openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
-import './../../common/ERC721Base.sol';
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "./../../common/ERC721Base.sol";
 
 contract TestDebtEngine is ERC721Base {
 

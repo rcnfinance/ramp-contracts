@@ -1,7 +1,7 @@
 pragma solidity ^0.5.10;
 
-import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
-import 'openzeppelin-solidity/contracts/utils/Address.sol';
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/utils/Address.sol";
 import "./ERC165.sol";
 
 
@@ -249,7 +249,7 @@ contract ERC721Base is ERC165 {
     //
 
     /**
-     * @dev Authorize a third party operator to manage (send) msg.sender's asset
+     * @dev Authorize a third party operator to manage (send) msg.sender"s asset
      * @param _operator address to be approved
      * @param _authorized bool set to true to authorize, false to withdraw authorization
      */
@@ -267,7 +267,7 @@ contract ERC721Base is ERC165 {
      */
     function approve(address _operator, uint256 _assetId) external {
         address holder = _ownerOf(_assetId);
-        require(msg.sender == holder || _isApprovedForAll(msg.sender, holder), "msg.sender can't approve");
+        require(msg.sender == holder || _isApprovedForAll(msg.sender, holder), "msg.sender cant approve");
         if (_getApproved(_assetId) != _operator) {
             _approval[_assetId] = _operator;
             emit Approval(holder, _operator, _assetId);
@@ -350,12 +350,12 @@ contract ERC721Base is ERC165 {
     }
 
     modifier addressDefined(address _target) {
-        require(_target != address(0), "Target can't be 0x0");
+        require(_target != address(0), "Target cant be 0x0");
         _;
     }
 
     /**
-     * @dev Alias of `safeTransferFrom(from, to, assetId, '')`
+     * @dev Alias of `safeTransferFrom(from, to, assetId, "")`
      *
      * @param _from address that currently owns an asset
      * @param _to address to receive the ownership of the asset
@@ -374,7 +374,7 @@ contract ERC721Base is ERC165 {
     /**
      * @dev Securely transfers the ownership of a given asset from one address to
      * another address, calling the method `onNFTReceived` on the target address if
-     * there's code associated with it
+     * there"s code associated with it
      *
      * @param _from address that currently owns an asset
      * @param _to address to receive the ownership of the asset

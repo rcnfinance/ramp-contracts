@@ -6,8 +6,8 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 interface TokenConverter {
 
     /// @notice Converts an amount 
-    ///         a. swap the user's ETH to IERC20 token or 
-    ///         b. swap the user's IERC20 token to another IERC20 token
+    ///         a. swap the user"s ETH to IERC20 token or 
+    ///         b. swap the user"s IERC20 token to another IERC20 token
     /// @param _inToken source token contract address
     /// @param _outToken destination token contract address
     /// @param _amount amount of source tokens
