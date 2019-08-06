@@ -1,11 +1,11 @@
-import './../interfaces/token/TokenConverter.sol';
-import './../interfaces/uniswap/UniswapFactoryInterface.sol';
-import './../interfaces/uniswap/UniswapExchangeInterface.sol';
-import './../safe/SafeERC20.sol';
-import './../safe/SafeExchange.sol';
-import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
-import 'openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
-import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
+import "./../interfaces/token/TokenConverter.sol";
+import "./../interfaces/uniswap/UniswapFactoryInterface.sol";
+import "./../interfaces/uniswap/UniswapExchangeInterface.sol";
+import "./../safe/SafeERC20.sol";
+import "./../safe/SafeExchange.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 pragma solidity 0.5.10;
 
 /// @notice proxy between ConverterRamp and Uniswap
@@ -45,9 +45,9 @@ contract UniswapProxy is TokenConverter, Ownable {
         uint256 _amount
     ) internal view returns (uint256, uint256, UniswapExchangeInterface) {
         UniswapExchangeInterface inExchange =
-          UniswapExchangeInterface(factory.getExchange(_token));
+            UniswapExchangeInterface(factory.getExchange(_token));
         UniswapExchangeInterface outExchange =
-          UniswapExchangeInterface(factory.getExchange(_outToken));
+            UniswapExchangeInterface(factory.getExchange(_outToken));
 
         uint256 etherCost = outExchange.getEthToTokenOutputPrice(_amount);
         uint256 tokenCost = inExchange.getTokenToEthOutputPrice(etherCost);
@@ -62,10 +62,10 @@ contract UniswapProxy is TokenConverter, Ownable {
         address _outToken,
         uint256 _amount
     ) internal view returns (uint256, UniswapExchangeInterface) {
-      UniswapExchangeInterface exchange =
-        UniswapExchangeInterface(factory.getExchange(_outToken));
+        UniswapExchangeInterface exchange =
+            UniswapExchangeInterface(factory.getExchange(_outToken));
 
-      return (exchange.getEthToTokenOutputPrice(_amount), exchange);
+        return (exchange.getEthToTokenOutputPrice(_amount), exchange);
     }
 
     /// @notice change uniswap factory address
@@ -109,8 +109,8 @@ contract UniswapProxy is TokenConverter, Ownable {
     }
 
     /// @notice Converts an amount 
-    ///         a. swap the user's ETH to IERC20 token or 
-    ///         b. swap the user's IERC20 token to another IERC20 token
+    ///         a. swap the user"s ETH to IERC20 token or 
+    ///         b. swap the user"s IERC20 token to another IERC20 token
     /// @param _inToken source token contract address
     /// @param _outToken destination token contract address
     /// @param _amount amount of source tokens
@@ -139,7 +139,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         
     }
 
-    /// @notice Swap the user's ETH to IERC20 token
+    /// @notice Swap the user`s ETH to IERC20 token
     /// @param _outToken source token contract address
     /// @param _amount amount of source tokens
     /// @param _etherCost amount of source _etherCost
@@ -159,11 +159,11 @@ contract UniswapProxy is TokenConverter, Ownable {
         exchange.swapEther(_amount, _etherCost, block.timestamp + 1, _outToken);
 
         require(_outToken.safeTransfer(_recipient, _amount), "error transfer tokens"); 
-        // Return any exceding ETH, if any
+        // Return leftover eth
         _origin.transfer(msg.value.sub(_etherCost));
     }
 
-    /// @notice swap the user's IERC20 token to another IERC20 token
+    /// @notice swap the user`s IERC20 token to another IERC20 token
     /// @param _token source token contract address
     /// @param _amount amount of source tokens
     /// @param _tokenCost amount of source _tokenCost
@@ -183,7 +183,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         /// Check that the player has transferred the token to this contract
         require(_token.safeTransferFrom(msg.sender, address(this), _tokenCost), "error pulling tokens");
 
-        /// Set the spender's token allowance to tokenCost
+        /// Set the spender`s token allowance to tokenCost
         _token.safeApprove(address(exchange), _tokenCost);
 
         /// safe swap tokens

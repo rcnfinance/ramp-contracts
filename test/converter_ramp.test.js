@@ -188,7 +188,8 @@ contract('ConverterRamp', function (accounts) {
       );
 
       expect(await simpleDestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
-      expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+      expect(await simpleDestToken.balanceOf(uniswapFactoryMock.address)).to.be.bignumber.equal(new BN(0));
+      expect(await simpleTestToken.balanceOf(uniswapProxy.address)).to.be.bignumber.equal(new BN(0));
 
       assert.equal(await loanManager.ownerOf(loanId), lender);
 
@@ -206,7 +207,8 @@ contract('ConverterRamp', function (accounts) {
       );
 
       expect(await simpleDestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
-      expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+      expect(await simpleDestToken.balanceOf(uniswapFactoryMock.address)).to.be.bignumber.equal(new BN(0));
+      expect(await simpleTestToken.balanceOf(uniswapProxy.address)).to.be.bignumber.equal(new BN(0));
     });
   });
 
@@ -260,6 +262,9 @@ contract('ConverterRamp', function (accounts) {
         simpleTestToken.address
       );
       const ethCost = sendEth[1];
+      const surplus = new BN(1000);
+
+      let prevConverterRampBal = new BN(await web3.eth.getBalance(converterRamp.address));
 
       await converterRamp.lend(
         uniswapProxy.address,
@@ -273,12 +278,21 @@ contract('ConverterRamp', function (accounts) {
         [],
         {
           from: lender,
-          value: ethCost,
+          value: ethCost.add(surplus),
         }
       );
 
+      expect(new BN(await web3.eth.getBalance(converterRamp.address))).to.be.bignumber.equal(prevConverterRampBal);
+      expect(new BN(await web3.eth.getBalance(uniswapExchangeMock.address))).to.be.bignumber.equal(amount);
+      expect(new BN(await web3.eth.getBalance(uniswapFactoryMock.address))).to.be.bignumber.equal(new BN(0));
+      expect(new BN(await web3.eth.getBalance(uniswapProxy.address))).to.be.bignumber.equal(new BN(0));
+
       expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+      expect(await simpleTestToken.balanceOf(uniswapFactoryMock.address)).to.be.bignumber.equal(new BN(0));
+      expect(await simpleTestToken.balanceOf(uniswapProxy.address)).to.be.bignumber.equal(new BN(0));
       assert.equal(await loanManager.ownerOf(loanId), lender);
+
+      prevConverterRampBal = new BN(await web3.eth.getBalance(converterRamp.address));
 
       await converterRamp.pay(
         uniswapProxy.address,
@@ -290,11 +304,18 @@ contract('ConverterRamp', function (accounts) {
         [],
         {
           from: payer,
-          value: ethCost,
+          value: ethCost.add(surplus),
         }
       );
 
+      expect(new BN(await web3.eth.getBalance(converterRamp.address))).to.be.bignumber.equal(prevConverterRampBal);
+      expect(new BN(await web3.eth.getBalance(uniswapExchangeMock.address))).to.be.bignumber.equal(amount.add(amount));
+      expect(new BN(await web3.eth.getBalance(uniswapFactoryMock.address))).to.be.bignumber.equal(new BN(0));
+      expect(new BN(await web3.eth.getBalance(uniswapProxy.address))).to.be.bignumber.equal(new BN(0));
+
       expect(await simpleTestToken.balanceOf(converterRamp.address)).to.be.bignumber.equal(new BN(0));
+      expect(await simpleTestToken.balanceOf(uniswapFactoryMock.address)).to.be.bignumber.equal(new BN(0));
+      expect(await simpleTestToken.balanceOf(uniswapProxy.address)).to.be.bignumber.equal(new BN(0));
     });
   });
 });

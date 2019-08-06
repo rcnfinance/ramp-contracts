@@ -1,14 +1,14 @@
 pragma solidity 0.5.10;
 
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
-import 'openzeppelin-solidity/contracts/ownership/Ownable.sol';
-import './interfaces/Cosigner.sol';
-import './interfaces/diaspore/DebtEngine.sol';
-import './interfaces/diaspore/LoanManager.sol';
-import './interfaces/token/TokenConverter.sol';
-import './interfaces/RateOracle.sol';
-import './safe/SafeERC20.sol';
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./interfaces/Cosigner.sol";
+import "./interfaces/diaspore/DebtEngine.sol";
+import "./interfaces/diaspore/LoanManager.sol";
+import "./interfaces/token/TokenConverter.sol";
+import "./interfaces/RateOracle.sol";
+import "./safe/SafeERC20.sol";
 
 /// @title  Converter Ramp
 /// @notice for conversion between different assets, use TokenConverter 
@@ -115,8 +115,7 @@ contract ConverterRamp is Ownable {
             _callbackData
         );
         
-
-        require(token.safeApprove(_loanManagerAddress, 0), 'error removing approve');
+        require(token.safeApprove(_loanManagerAddress, 0), "error removing approve");
         require(token.balanceOf(address(this)) == prevTokenBal - amount, "the contract balance should be the previous");
 
         /// transfer loan to msg.sender
@@ -176,10 +175,10 @@ contract ConverterRamp is Ownable {
         TokenConverter tokenConverter = TokenConverter(_converter);
         
         /// pull tokens to convert
-        require(fromToken.safeTransferFrom(msg.sender, address(this), _tokenCost), 'Error pulling token amount');
+        require(fromToken.safeTransferFrom(msg.sender, address(this), _tokenCost), "Error pulling token amount");
 
         /// safe approve tokens to tokenConverter
-        require(fromToken.safeApprove(address(tokenConverter), _tokenCost), 'Error approving token transfer');
+        require(fromToken.safeApprove(address(tokenConverter), _tokenCost), "Error approving token transfer");
 
         /// store the previus balance after conversion to validate
         uint256 prevBalance = toToken.balanceOf(address(this));
@@ -188,13 +187,13 @@ contract ConverterRamp is Ownable {
         tokenConverter.convert(fromToken, toToken, _amount, _tokenCost, _etherCost, msg.sender);
 
         /// token balance should have increased by amount
-        require(_amount == toToken.balanceOf(address(this)) - prevBalance, 'Bought amound does does not match');
+        require(_amount == toToken.balanceOf(address(this)) - prevBalance, "Bought amound does does not match");
 
         /// if we are converting from a token, remove the approve
-        require(fromToken.safeApprove(address(tokenConverter), 0), 'Error removing token approve');
+        require(fromToken.safeApprove(address(tokenConverter), 0), "Error removing token approve");
 
         /// approve token to loan manager
-        require(toToken.safeApprove(_loanManagerAddress, _tokenCost), 'Error approving lend token transfer');
+        require(toToken.safeApprove(_loanManagerAddress, _tokenCost), "Error approving lend token transfer");
 
     }
 
@@ -214,11 +213,15 @@ contract ConverterRamp is Ownable {
         TokenConverter tokenConverter = TokenConverter(_converter);
 
         /// store the previus balance after conversion to validate
-        uint256 prevBalance = address(this).balance;
+        uint256 prevEthBal = address(this).balance - msg.value;
 
         /// call convert in token converter
         tokenConverter.convert.value(_amount)(fromToken, toToken, _amount, _tokenCost, _etherCost, msg.sender);
 
+        /// give back the surplus if the sender send more eth
+        uint256 surplus = address(this).balance - prevEthBal;
+        if (surplus != 0)
+            msg.sender.transfer(surplus);
     }
 
     /// @notice returns how much RCN is required for a given lend
