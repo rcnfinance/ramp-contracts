@@ -139,7 +139,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         
     }
 
-    /// @notice Swap the user"s ETH to IERC20 token
+    /// @notice Swap the user`s ETH to IERC20 token
     /// @param _outToken source token contract address
     /// @param _amount amount of source tokens
     /// @param _etherCost amount of source _etherCost
@@ -163,7 +163,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         _origin.transfer(msg.value.sub(_etherCost));
     }
 
-    /// @notice swap the user"s IERC20 token to another IERC20 token
+    /// @notice swap the user`s IERC20 token to another IERC20 token
     /// @param _token source token contract address
     /// @param _amount amount of source tokens
     /// @param _tokenCost amount of source _tokenCost
@@ -183,7 +183,7 @@ contract UniswapProxy is TokenConverter, Ownable {
         /// Check that the player has transferred the token to this contract
         require(_token.safeTransferFrom(msg.sender, address(this), _tokenCost), "error pulling tokens");
 
-        /// Set the spender"s token allowance to tokenCost
+        /// Set the spender`s token allowance to tokenCost
         _token.safeApprove(address(exchange), _tokenCost);
 
         /// safe swap tokens

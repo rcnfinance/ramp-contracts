@@ -24,7 +24,7 @@ contract ERC165 is IERC165 {
     */
 
     /**
-    * @dev a mapping of interface id to whether or not it"s supported
+    * @dev a mapping of interface id to whether or not it is supported
     */
     mapping(bytes4 => bool) private _supportedInterfaces;
 
@@ -55,7 +55,7 @@ contract ERC165 is IERC165 {
     function _registerInterface(bytes4 interfaceId)
         internal
     {
-        require(interfaceId != 0xffffffff, "Cant register 0xffffffff");
+        require(interfaceId != 0xffffffff, "Can not register 0xffffffff");
         _supportedInterfaces[interfaceId] = true;
     }
 }

@@ -3,7 +3,7 @@ pragma solidity 0.5.10;
 
 
 /// @dev Defines the interface of a standard Diaspore RCN Oracle,
-/// The contract should also implement it"s ERC165 interface: 0xa265d8e0
+/// The contract should also implement it is ERC165 interface: 0xa265d8e0
 /// @notice Each oracle can only support one currency
 /// @author Agustin Aguilar
 interface RateOracle {

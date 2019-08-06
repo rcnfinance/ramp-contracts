@@ -172,7 +172,7 @@ contract Model is IERC165 {
         @param timestamp Timestamp of the obligation query
 
         @return amount Amount pending to pay on the given timestamp
-        @return defined True If the amount returned is fixed and can"t change
+        @return defined True If the amount returned is fixed and can't change
     */
     function getObligation(bytes32 id, uint64 timestamp) external view returns (uint256 amount, bool defined);
 
@@ -233,7 +233,7 @@ contract Model is IERC165 {
         The registry could be paid before or after the date, but the debt will always be
             considered overdue if paid after this timestamp.
 
-        This is the estimated final payment date of the debt if it"s always paid on each exact dueTime.
+        This is the estimated final payment date of the debt if it is always paid on each exact dueTime.
 
         @param id Id of the registry
 

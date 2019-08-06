@@ -149,7 +149,26 @@ jobs:
                 command: ./node_modules/.bin/eslint .
 
     # The lint-solidity job
-    # TODO: (jpgonzalezra)
+    lint-solidity:
+        working_directory: ~/project
+        docker:
+            - image: circleci/node:8.12
+        steps:
+            # Checkout the code from the branch into the working_directory
+            - checkout
+            # Log the current branch
+            - run:
+                name: Show current branch
+                command: echo ${CIRCLE_BRANCH}
+            # Restore local dependencies from cache
+            - restore_cache:
+                keys:
+                - v2-dependencies-{{ checksum "package.json" }}
+                - v2-dependencies-
+            # Run Solidity lint
+            - run:
+                name: Solium
+                command: ./node_modules/.bin/solhint \"contracts/**/*.sol\"
 
 workflows:
     version: 2
