@@ -184,7 +184,7 @@ contract ConverterRamp is Ownable {
         uint256 prevBalance = toToken.balanceOf(address(this));
 
         /// call convert in token converter
-        tokenConverter.convert(fromToken, toToken, _amount, _tokenCost, _etherCost, msg.sender);
+        tokenConverter.convert(fromToken, toToken, _amount, _tokenCost, _etherCost);
 
         /// token balance should have increased by amount
         require(_amount == toToken.balanceOf(address(this)) - prevBalance, "Bought amound does does not match");
@@ -216,12 +216,13 @@ contract ConverterRamp is Ownable {
         uint256 prevEthBal = address(this).balance - msg.value;
 
         /// call convert in token converter
-        tokenConverter.convert.value(_amount)(fromToken, toToken, _amount, _tokenCost, _etherCost, msg.sender);
+        tokenConverter.convert.value(_amount)(fromToken, toToken, _amount, _tokenCost, _etherCost);
 
-        /// give back the surplus if the sender send more eth
+        /// Return leftover eth
         uint256 surplus = address(this).balance - prevEthBal;
-        if (surplus != 0)
+        if (surplus != 0) {
             msg.sender.transfer(surplus);
+        }
     }
 
     /// @notice returns how much RCN is required for a given lend

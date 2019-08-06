@@ -119,9 +119,11 @@ jobs:
                 no_output_timeout: 30m
                 command: node_modules/.bin/rp-solidity-coverage
             # Upload results
-            - run:
-                name: Upload coverage to coveralls
-                command: cat coverage/lcov.info | node_modules/.bin/coveralls
+            #- run:
+            #    name: Upload coverage to coveralls
+            #    command: cat coverage/lcov.info | node_modules/.bin/coveralls
+            # TODO (jpgonzalezra)
+
             # Save artifacts
             - store_artifacts:
                 path: coverage
@@ -182,14 +184,13 @@ workflows:
             - test:
                 requires:
                     - install
-            #- coverage:
-            #    requires:
-            #        - install
-            # TODO: (jpgonzalezra)
+            - coverage:
+                requires:
+                    - install
             - lint-javascript:
                 requires:
                     - install
             - lint-solidity:
-               requires:
+                requires:
                     - install
             

@@ -109,27 +109,24 @@ contract UniswapProxy is TokenConverter, Ownable {
     }
 
     /// @notice Converts an amount 
-    ///         a. swap the user"s ETH to IERC20 token or 
-    ///         b. swap the user"s IERC20 token to another IERC20 token
+    ///         a. swap the user`s ETH to IERC20 token or 
+    ///         b. swap the user`s IERC20 token to another IERC20 token
     /// @param _inToken source token contract address
     /// @param _outToken destination token contract address
     /// @param _amount amount of source tokens
     /// @param _tokenCost amount of source _tokenCost
     /// @param _etherCost amount of source _etherCost
-    /// @param _origin address to transfer leftover eth
-    /// @dev _origin and _recipient can be different.
     function convert(
         IERC20 _inToken,
         IERC20 _outToken, 
         uint256 _amount,
         uint256 _tokenCost,
-        uint256 _etherCost, 
-        address payable _origin
+        uint256 _etherCost
     ) external payable {   
 
         address sender = msg.sender;
         if (_inToken == ETH_TOKEN_ADDRESS && _outToken != ETH_TOKEN_ADDRESS) {
-            execSwapEtherToToken(_outToken, _amount, _etherCost, sender, _origin);
+            execSwapEtherToToken(_outToken, _amount, _etherCost, sender);
         } else {
             require(msg.value == 0, "eth not required");    
             execSwapTokenToToken(_inToken, _amount, _tokenCost, _etherCost, _outToken, sender);
@@ -144,13 +141,11 @@ contract UniswapProxy is TokenConverter, Ownable {
     /// @param _amount amount of source tokens
     /// @param _etherCost amount of source _etherCost
     /// @param _recipient address to send swapped tokens to
-    /// @param _origin address to transfer leftover eth
     function execSwapEtherToToken(
         IERC20 _outToken, 
         uint _amount,
         uint _etherCost, 
-        address _recipient, 
-        address payable _origin
+        address _recipient
     ) public payable {
         
         UniswapExchangeInterface exchange = UniswapExchangeInterface(factory.getExchange(address(_outToken)));
@@ -159,8 +154,6 @@ contract UniswapProxy is TokenConverter, Ownable {
         exchange.swapEther(_amount, _etherCost, block.timestamp + 1, _outToken);
 
         require(_outToken.safeTransfer(_recipient, _amount), "error transfer tokens"); 
-        // Return leftover eth
-        _origin.transfer(msg.value.sub(_etherCost));
     }
 
     /// @notice swap the user`s IERC20 token to another IERC20 token
