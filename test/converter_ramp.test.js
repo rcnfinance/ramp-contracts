@@ -266,6 +266,7 @@ contract('ConverterRamp', function (accounts) {
 
       let prevConverterRampBal = new BN(await web3.eth.getBalance(converterRamp.address));
 
+      const lendValue = new BN(ethCost).add(surplus);
       await converterRamp.lend(
         uniswapProxy.address,
         ethAddress,
@@ -278,7 +279,7 @@ contract('ConverterRamp', function (accounts) {
         [],
         {
           from: lender,
-          value: ethCost.add(surplus),
+          value: lendValue,
         }
       );
 
@@ -294,6 +295,7 @@ contract('ConverterRamp', function (accounts) {
 
       prevConverterRampBal = new BN(await web3.eth.getBalance(converterRamp.address));
 
+      const payValue = new BN(ethCost).add(surplus);
       await converterRamp.pay(
         uniswapProxy.address,
         ethAddress,
@@ -304,7 +306,7 @@ contract('ConverterRamp', function (accounts) {
         [],
         {
           from: payer,
-          value: ethCost.add(surplus),
+          value: payValue,
         }
       );
 
