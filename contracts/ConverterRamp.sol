@@ -278,7 +278,4 @@ contract ConverterRamp is Ownable {
         emit ReadedOracle(_oracle, tokens, equivalent);
         return tokens.mul(_amount) / equivalent;
     }
-
-    function() external payable {}
-
 }
