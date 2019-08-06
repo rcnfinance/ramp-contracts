@@ -182,14 +182,13 @@ workflows:
             - test:
                 requires:
                     - install
-            #- coverage:
-            #    requires:
-            #        - install
-            # TODO: (jpgonzalezra)
+            - coverage:
+                requires:
+                    - install
             - lint-javascript:
                 requires:
                     - install
             - lint-solidity:
-               requires:
+                requires:
                     - install
             
