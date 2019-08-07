@@ -154,6 +154,11 @@ contract UniswapProxy is TokenConverter, Ownable {
         exchange.swapEther(_amount, _etherCost, block.timestamp + 1, _outToken);
 
         require(_outToken.safeTransfer(_recipient, _amount), "error transfer tokens"); 
+        uint256 toReturn = msg.value.sub(_etherCost);
+        if (toReturn > 0) {
+            msg.sender.transfer(toReturn);
+        }
+
     }
 
     /// @notice swap the user`s IERC20 token to another IERC20 token
