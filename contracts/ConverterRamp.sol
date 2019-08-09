@@ -60,11 +60,12 @@ contract ConverterRamp is Ownable {
         /// pay loan
         DebtEngine debtEngine = DebtEngine(_debtEngineAddress);
         require(token.safeApprove(_debtEngineAddress, amount), "error on payment approve");
-        uint256 prevTokenBal = token.balanceOf(address(this));
+        
+        uint256 prevTokenBalance = token.balanceOf(address(this));
         debtEngine.pay(_requestId, amount, _payFrom, _oracleData);
 
         require(token.approve(_debtEngineAddress, 0), "error removing the payment approve");
-        require(token.balanceOf(address(this)) == prevTokenBal - amount, "the contract balance should be the previous");
+        require(token.balanceOf(address(this)) == prevTokenBalance.sub(amount), "the contract balance should be the previous");
     }
 
     /// @notice Lends a loan using fromTokens, transfer loan ownership to msg.sender
@@ -104,7 +105,7 @@ contract ConverterRamp is Ownable {
         /// convert using token converter
         convertSafe(_converter, _loanManagerAddress, _fromToken, address(token), amount);
 
-        uint256 prevTokenBal = token.balanceOf(address(this));
+        uint256 prevTokenBalance = token.balanceOf(address(this));
 
         LoanManager(_loanManagerAddress).lend(
             _requestId, 
@@ -116,7 +117,7 @@ contract ConverterRamp is Ownable {
         );
         
         require(token.safeApprove(_loanManagerAddress, 0), "error removing approve");
-        require(token.balanceOf(address(this)) == prevTokenBal - amount, "the contract balance should be the previous");
+        require(token.balanceOf(address(this)) == prevTokenBalance.sub(amount), "the contract balance should be the previous");
 
         /// transfer loan to msg.sender
         DebtEngine(_debtEngineAddress).transferFrom(address(this), msg.sender, uint256(_requestId));
@@ -148,7 +149,7 @@ contract ConverterRamp is Ownable {
         address _fromToken,
         address _token,
         uint256 _amount
-    ) internal returns (uint256 bought) {
+    ) internal {
         
         (uint256 tokenCost, uint256 etherCost) = getCost(_amount, _converter, _fromToken, address(_token));
         if (_fromToken == ETH_ADDRESS) {
@@ -168,7 +169,7 @@ contract ConverterRamp is Ownable {
         uint256 _amount,
         uint256 _tokenCost,
         uint256 _etherCost
-    ) internal returns (uint256 bought) {
+    ) internal {
         
         IERC20 fromToken = IERC20(_fromTokenAddress);
         IERC20 toToken = IERC20(_toTokenAddress);
@@ -187,7 +188,7 @@ contract ConverterRamp is Ownable {
         tokenConverter.convert(fromToken, toToken, _amount, _tokenCost, _etherCost);
 
         /// token balance should have increased by amount
-        require(_amount == toToken.balanceOf(address(this)) - prevBalance, "Bought amound does does not match");
+        require(_amount == toToken.balanceOf(address(this)).sub(prevBalance), "Bought amound does does not match");
 
         /// if we are converting from a token, remove the approve
         require(fromToken.safeApprove(address(tokenConverter), 0), "Error removing token approve");
@@ -206,23 +207,24 @@ contract ConverterRamp is Ownable {
         uint256 _amount,
         uint256 _tokenCost,
         uint256 _etherCost
-    ) internal returns (uint256 bought) {
+    ) internal {
 
         IERC20 fromToken = IERC20(_fromTokenAddress);
         IERC20 toToken = IERC20(_toTokenAddress);
         TokenConverter tokenConverter = TokenConverter(_converter);
 
         /// store the previus balance after conversion to validate
-        uint256 prevEthBal = address(this).balance - msg.value;
+        uint256 prevEthBalance = (address(this).balance).sub(msg.value);
 
         /// call convert in token converter
-        tokenConverter.convert.value(_amount)(fromToken, toToken, _amount, _tokenCost, _etherCost);
+        tokenConverter.convert.value(msg.value)(fromToken, toToken, _amount, _tokenCost, _etherCost);
 
         /// Return leftover eth
-        uint256 surplus = address(this).balance - prevEthBal;
-        if (surplus != 0) {
+        uint256 surplus = (address(this).balance).sub(prevEthBalance);
+        if (surplus > 0) {
             msg.sender.transfer(surplus);
         }
+
     }
 
     /// @notice returns how much RCN is required for a given lend
