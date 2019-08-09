@@ -217,7 +217,7 @@ contract ConverterRamp is Ownable {
         uint256 prevEthBalance = (address(this).balance).sub(msg.value);
 
         /// call convert in token converter
-        tokenConverter.convert.value(msg.value)(fromToken, toToken, _amount, _tokenCost, _etherCost);
+        tokenConverter.convert.value(_amount)(fromToken, toToken, _amount, _tokenCost, _etherCost);
 
         /// Return leftover eth
         uint256 surplus = (address(this).balance).sub(prevEthBalance);
