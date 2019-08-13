@@ -102,7 +102,7 @@ contract ConverterRamp is Ownable {
         (uint256 tokenCost) = convertSafe(_converter, _fromToken, address(token), amount);
 
         /// approve token to loan manager
-        require(token.safeApprove(_loanManagerAddress, tokenCost), "Error approving lend token transfer");
+        require(token.safeApprove(_loanManagerAddress, amount), "Error approving lend token transfer");
 
         uint256 prevTokenBalance = token.balanceOf(address(this));
 
@@ -211,7 +211,7 @@ contract ConverterRamp is Ownable {
         uint256 prevEthBalance = (address(this).balance).sub(msg.value);
 
         /// call convert in token converter
-        tokenConverter.convert.value(_amount)(fromToken, toToken, _amount, _tokenCost, _etherCost);
+        tokenConverter.convert.value(_etherCost)(fromToken, toToken, _amount, _tokenCost, _etherCost);
 
         /// Return leftover eth
         uint256 surplus = (address(this).balance).sub(prevEthBalance);
