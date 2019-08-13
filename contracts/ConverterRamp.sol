@@ -55,7 +55,7 @@ contract ConverterRamp is Ownable {
         );
         
         /// converter using token converter
-        convertSafe(_converter, _loanManagerAddress, _fromToken, address(token), amount);
+        convertSafe(_converter, _fromToken, address(token), amount);
 
         /// pay loan
         DebtEngine debtEngine = DebtEngine(_debtEngineAddress);
@@ -103,7 +103,10 @@ contract ConverterRamp is Ownable {
         );
 
         /// convert using token converter
-        convertSafe(_converter, _loanManagerAddress, _fromToken, address(token), amount);
+        (uint256 tokenCost) = convertSafe(_converter, _fromToken, address(token), amount);
+
+        /// approve token to loan manager
+        require(token.safeApprove(_loanManagerAddress, tokenCost), "Error approving lend token transfer");
 
         uint256 prevTokenBalance = token.balanceOf(address(this));
 
@@ -145,17 +148,18 @@ contract ConverterRamp is Ownable {
     /// @dev orchestrator between token->token, eth->token
     function convertSafe(
         address _converter,
-        address _loanManagerAddress,
         address _fromToken,
         address _token,
         uint256 _amount
-    ) internal {
+    ) internal returns (uint256) {
         
         (uint256 tokenCost, uint256 etherCost) = getCost(_amount, _converter, _fromToken, address(_token));
         if (_fromToken == ETH_ADDRESS) {
             ethConvertSafe(_converter, _fromToken, address(_token), _amount, tokenCost, etherCost);
+            return etherCost;
         } else {
-            tokenConvertSafe(_converter, _loanManagerAddress, _fromToken, address(_token), _amount, tokenCost, etherCost);
+            tokenConvertSafe(_converter, _fromToken, address(_token), _amount, tokenCost, etherCost);
+            return tokenCost;
         }
     }
 
@@ -163,7 +167,6 @@ contract ConverterRamp is Ownable {
     ///      Token convertions
     function tokenConvertSafe(
         address _converter,
-        address _loanManagerAddress,
         address _fromTokenAddress,
         address _toTokenAddress,
         uint256 _amount,
@@ -192,9 +195,6 @@ contract ConverterRamp is Ownable {
 
         /// if we are converting from a token, remove the approve
         require(fromToken.safeApprove(address(tokenConverter), 0), "Error removing token approve");
-
-        /// approve token to loan manager
-        require(toToken.safeApprove(_loanManagerAddress, _tokenCost), "Error approving lend token transfer");
 
     }
 
