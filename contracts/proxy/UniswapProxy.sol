@@ -93,12 +93,12 @@ contract UniswapProxy is TokenConverter, Ownable {
     function getPrice(
         address _outToken,
         uint256 _amount
-    ) public view returns (uint256, uint256) {
+    ) public view returns (uint256) {
         (
             uint256 etherCost,
         ) = price(address(_outToken), _amount);
 
-        return (0, etherCost);
+        return etherCost;
 
     }
 

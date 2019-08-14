@@ -26,7 +26,7 @@ interface TokenConverter {
     function getPrice(
         address _outToken,
         uint256 _amount
-    ) external view returns (uint256, uint256);
+    ) external view returns (uint256);
 
     /// @notice get the cost, in wei, of making a convertion using the value specified.
     /// @dev Token -> Token
