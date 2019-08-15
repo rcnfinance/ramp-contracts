@@ -132,7 +132,7 @@ contract ConverterRamp is Ownable {
     function getCost(uint _amount, address _converter, address _fromToken, address _token) public view returns (uint256, uint256)  {
         TokenConverter tokenConverter = TokenConverter(_converter);
         if (_fromToken == ETH_ADDRESS) {
-            return tokenConverter.getPrice(_token, _amount);
+            return (0, tokenConverter.getPrice(_token, _amount));
         } else {
             return tokenConverter.getPrice(_fromToken, _token, _amount);
         }
