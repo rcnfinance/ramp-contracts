@@ -1,3 +1,5 @@
+pragma solidity 0.5.10;
+
 import "./../interfaces/token/TokenConverter.sol";
 import "./../interfaces/uniswap/UniswapFactoryInterface.sol";
 import "./../interfaces/uniswap/UniswapExchangeInterface.sol";
@@ -6,7 +8,7 @@ import "./../safe/SafeExchange.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-pragma solidity 0.5.10;
+
 
 /// @notice proxy between ConverterRamp and Uniswap
 ///         accepts tokens and ether, converts these to the desired token,
