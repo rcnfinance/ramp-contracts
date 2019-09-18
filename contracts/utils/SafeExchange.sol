@@ -1,9 +1,9 @@
-pragma solidity ^0.5.10;
+pragma solidity ^0.5.11;
  
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./../interfaces/uniswap/UniswapFactoryInterface.sol";
-import "./../interfaces/uniswap/UniswapExchangeInterface.sol";
+import "./../interfaces/uniswap/UniswapFactory.sol";
+import "./../interfaces/uniswap/UniswapExchange.sol";
 
 library SafeExchange {
     using SafeMath for uint256;
@@ -18,7 +18,7 @@ library SafeExchange {
     }
 
     function swapTokens(
-        UniswapExchangeInterface _exchange,
+        UniswapExchange _exchange,
         uint256 _outValue,
         uint256 _inValue,
         uint256 _ethValue,
@@ -35,7 +35,7 @@ library SafeExchange {
     }
 
     function swapEther(
-        UniswapExchangeInterface _exchange,
+        UniswapExchange _exchange,
         uint256 _outValue,
         uint256 _ethValue,
         uint256 _deadline,

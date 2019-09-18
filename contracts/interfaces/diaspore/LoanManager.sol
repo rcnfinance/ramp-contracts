@@ -1,11 +1,12 @@
-pragma solidity 0.5.10;
+pragma solidity 0.5.11;
 
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-
+import "./DebtEngine.sol";
 
 contract LoanManager {
     IERC20 public token;
 
+    function debtEngine() external view returns (DebtEngine);
     function getCurrency(uint256 _id) external view returns (bytes32);
     function getAmount(uint256 _id) external view returns (uint256);
     function getAmount(bytes32 _id) external view returns (uint256);

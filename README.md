@@ -19,7 +19,7 @@ Compiled contracts will be written to the `build` directory as
 
 ## Usage
 
-A UniswapProxy contract is deployed with the following configuration parameters:
+A UniswapConverter contract is deployed with the following configuration parameters:
 
   * address factory: The address of the Uniswap factory contract to use to access swappable liquidity.
 
