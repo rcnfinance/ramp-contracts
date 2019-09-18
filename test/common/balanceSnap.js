@@ -24,7 +24,6 @@ module.exports.balanceSnap = async (token, address, account = "") => {
             )
         },
         requireDecrease: async function (delta) {
-            console.log(snapBalance);
             const realdecrease = snapBalance.sub(await token.balanceOf(address))
             expect(
                 snapBalance.sub(delta),
@@ -34,7 +33,7 @@ module.exports.balanceSnap = async (token, address, account = "") => {
             )
         },
         restore: async function () {
-            await token.setBalance(snapBalance, address)
+            await token.setBalance(address, snapBalance)
         }
     }
 }

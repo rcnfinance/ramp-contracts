@@ -116,6 +116,30 @@ contract('ConverterRamp', function (accounts) {
 
     return id;
   }
+
+  async function lendLoan(id, oracleData = []) {
+    const balanceSnap = await Snap.balanceSnap(rcnToken, accounts[8]);
+
+    await rcnToken.setBalance(accounts[8], new BN(2).pow(new BN(128)));
+    await rcnToken.approve(loanManager.address, MAX_UINT256, { from: accounts[8] });
+
+    await loanManager.lend(
+      id,
+      oracleData,
+      Helper.address0x,
+      0,
+      [],
+      [],
+      {
+        from: accounts[8]
+      }
+    );
+
+    await balanceSnap.restore();
+    await rcnToken.approve(loanManager.address, 0, { from: accounts[8] });
+
+    return id;
+  }
   it("Shoud lend a loan using ETH, sending the exact amount", async () => {
     const id = await requestLoan(new BN(1000).mul(ETH));
 
@@ -402,4 +426,206 @@ contract('ConverterRamp', function (accounts) {
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
+  it("Shoud pay a loan using ETH, sending the exact amount", async () => {
+    const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
+    const payAmount = new BN(100).mul(ETH);
+    const estimated = await converterRamp.getPayCost.call(
+      uniswapConverter.address,
+      ETH_ADDRESS,
+      id,
+      payAmount,
+      []
+    );
+
+    const ethSnap = await Snap.etherSnap(accounts[5]);
+    const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
+
+    await converterRamp.pay(
+      uniswapConverter.address, // Token converter  
+      ETH_ADDRESS,              // Used token
+      payAmount,                // Amount to pay
+      estimated,                // Max token spend
+      id,                       // Loan ID
+      [],                       // Oracle data
+      {
+        from: accounts[5],
+        value: estimated,
+        gasPrice: new BN(0)
+      }
+    );
+
+    expect(await model.getPaid(id)).to.eq.BN(payAmount);
+    await ethSnap.requireDecrease(estimated);
+    await engineSnap.requireIncrease(payAmount);
+  });
+  it("Shoud pay a loan using ETH, sending sending extra amount", async () => {
+    const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
+    const payAmount = new BN(100).mul(ETH);
+    const estimated = await converterRamp.getPayCost.call(
+      uniswapConverter.address,
+      ETH_ADDRESS,
+      id,
+      payAmount,
+      []
+    );
+
+    const maxSpend = estimated.mul(new BN(102)).div(new BN(100)); // Send 2% more
+    const ethSnap = await Snap.etherSnap(accounts[5]);
+    const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
+
+    await converterRamp.pay(
+      uniswapConverter.address, // Token converter  
+      ETH_ADDRESS,              // Used token
+      payAmount,                // Amount to pay
+      maxSpend,                 // Max token spend
+      id,                       // Loan ID
+      [],                       // Oracle data
+      {
+        from: accounts[5],
+        value: maxSpend,
+        gasPrice: new BN(0)
+      }
+    );
+
+    expect(await model.getPaid(id)).to.eq.BN(payAmount);
+    await ethSnap.requireDecrease(estimated);
+    await engineSnap.requireIncrease(payAmount);
+  });
+  it("Shoud pay the total amount of a loan using ETH, sending sending extra amount", async () => {
+    const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
+    const payAmount = new BN(2000).mul(ETH);
+    const realPayment = new BN(1000).mul(ETH);
+    const estimated = await converterRamp.getPayCost.call(
+      uniswapConverter.address,
+      ETH_ADDRESS,
+      id,
+      payAmount,
+      []
+    );
+
+    const maxSpend = estimated.mul(new BN(102)).div(new BN(100)); // Send 2% more
+    const ethSnap = await Snap.etherSnap(accounts[5]);
+    const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
+
+    await converterRamp.pay(
+      uniswapConverter.address, // Token converter  
+      ETH_ADDRESS,              // Used token
+      payAmount,                // Amount to pay
+      maxSpend,                 // Max token spend
+      id,                       // Loan ID
+      [],                       // Oracle data
+      {
+        from: accounts[5],
+        value: maxSpend,
+        gasPrice: new BN(0)
+      }
+    );
+
+    expect(await model.getPaid(id)).to.eq.BN(realPayment);
+    await ethSnap.requireDecrease(estimated);
+    await engineSnap.requireIncrease(realPayment);
+  });
+  it("Shoud pay a loan using another token, sending the exact amount", async () => {
+    const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
+    const payAmount = new BN(100).mul(ETH);
+    const estimated = await converterRamp.getPayCost.call(
+      uniswapConverter.address,
+      destToken.address,
+      id,
+      payAmount,
+      []
+    );
+
+    const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
+    await destToken.setBalance(accounts[5], estimated);
+    await destToken.approve(converterRamp.address, estimated, { from: accounts[5] });
+    const balanceSnap = await Snap.balanceSnap(destToken, accounts[5]);
+
+    await converterRamp.pay(
+      uniswapConverter.address, // Token converter  
+      destToken.address,        // Used token
+      payAmount,                // Amount to pay
+      estimated,                // Max token spend
+      id,                       // Loan ID
+      [],                       // Oracle data
+      {
+        from: accounts[5],
+        gasPrice: new BN(0)
+      }
+    );
+
+    expect(await model.getPaid(id)).to.eq.BN(payAmount);
+    await balanceSnap.requireDecrease(estimated);
+    await engineSnap.requireIncrease(payAmount);
+  });
+  it("Shoud pay a loan using another token, sending sending extra amount", async () => {
+    const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
+    const payAmount = new BN(100).mul(ETH);
+    const estimated = await converterRamp.getPayCost.call(
+      uniswapConverter.address,
+      destToken.address,
+      id,
+      payAmount,
+      []
+    );
+
+    const maxSpend = estimated.mul(new BN(102)).div(new BN(100)); // Send 2% more
+    const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
+    await destToken.setBalance(accounts[5], maxSpend);
+    await destToken.approve(converterRamp.address, maxSpend, { from: accounts[5] });
+    const balanceSnap = await Snap.balanceSnap(destToken, accounts[5]);
+
+    await converterRamp.pay(
+      uniswapConverter.address, // Token converter  
+      destToken.address,        // Used token
+      payAmount,                // Amount to pay
+      maxSpend,                 // Max token spend
+      id,                       // Loan ID
+      [],                       // Oracle data
+      {
+        from: accounts[5],
+        gasPrice: new BN(0)
+      }
+    );
+
+    expect(await model.getPaid(id)).to.eq.BN(payAmount);
+    await balanceSnap.requireDecrease(estimated);
+    await engineSnap.requireIncrease(payAmount);
+  });
+  it("Shoud pay the total amount of a loan using another token, sending sending extra amount", async () => {
+    const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
+    const payAmount = new BN(2000).mul(ETH);
+    const realPayment = new BN(1000).mul(ETH);
+    const estimated = await converterRamp.getPayCost.call(
+      uniswapConverter.address,
+      destToken.address,
+      id,
+      payAmount,
+      []
+    );
+
+    const maxSpend = estimated.mul(new BN(102)).div(new BN(100)); // Send 2% more
+    const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
+    await destToken.setBalance(accounts[5], maxSpend);
+    await destToken.approve(converterRamp.address, maxSpend, { from: accounts[5] });
+    const balanceSnap = await Snap.balanceSnap(destToken, accounts[5]);
+
+    await converterRamp.pay(
+      uniswapConverter.address, // Token converter  
+      destToken.address,        // Used token
+      payAmount,                // Amount to pay
+      maxSpend,                 // Max token spend
+      id,                       // Loan ID
+      [],                       // Oracle data
+      {
+        from: accounts[5],
+        gasPrice: new BN(0)
+      }
+    );
+
+    expect(await model.getPaid(id)).to.eq.BN(realPayment);
+    await balanceSnap.requireDecrease(estimated);
+    await engineSnap.requireIncrease(realPayment);
+  });
+
 });

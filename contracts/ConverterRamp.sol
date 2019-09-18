@@ -160,6 +160,28 @@ contract ConverterRamp is Ownable {
         );
     }
 
+    /// @notice returns how much RCN is required for a given pay
+    function getPayCost(
+        TokenConverter _converter,
+        IERC20 _fromToken,
+        bytes32 _requestId,
+        uint256 _amount,
+        bytes calldata _oracleData
+    ) external returns (uint256) {
+        uint256 amountRcn = getRequiredRcnPay(
+            debtEngine,
+            _requestId,
+            _amount,
+            _oracleData
+        );
+
+        return _converter.getPriceConvertTo(
+            _fromToken,
+            token,
+            amountRcn
+        );
+    }
+
     /// @notice returns how much RCN is required for a given lend
     function getRequiredRcnLend(
         LoanManager _loanManager,
