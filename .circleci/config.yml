@@ -185,9 +185,6 @@ workflows:
             - test:
                 requires:
                     - install
-            - coverage:
-                requires:
-                    - install
             - lint-javascript:
                 requires:
                     - install
