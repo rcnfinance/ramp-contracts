@@ -3000,3 +3000,5 @@ contract LoanManager is BytesUtils {
             result = abi.decode(returnData, (bytes32));
     }
 }
+
+contract DiasporeFlat {}
