@@ -14,15 +14,26 @@ const Helper = require('./common/helper.js');
 const Snap = require('./common/balanceSnap.js');
 
 const BN = web3.utils.BN;
-const expect = require('chai').use(require('bn-chai')(BN)).expect
-
+const expect = require('chai').use(require('bn-chai')(BN)).expect;
 
 const ETH = new BN(10).pow(new BN(18));
-const ETH_ADDRESS = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+const ETH_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 const MAX_UINT256 = new BN(2).pow(new BN(256)).sub(new BN(1));
 const MAX_UINT64 = new BN(2).pow(new BN(64)).sub(new BN(1));
 
 contract('ConverterRamp', function (accounts) {
+  let rcnToken;
+  let destToken;
+  let debtEngine;
+  let loanManager;
+  let model;
+  let oracle;
+  let converterRamp;
+  let uniswapFactory;
+  let rcnUniswap;
+  let destUniswap;
+  let uniswapConverter;
+
   before('Deploy RCN contracts', async () => {
     // Deploy DEST and TEST tokens
     rcnToken = await TestToken.new();
@@ -46,8 +57,8 @@ contract('ConverterRamp', function (accounts) {
     await uniswapFactory.createExchange(rcnToken.address);
     rcnUniswap = await UniswapExchange.at(await uniswapFactory.tokenToExchange(rcnToken.address));
     // Add liquidity 1 RCN => 0.00005 ETH
-    const amountEthRcnLiquidity = new BN(40).mul(ETH);                        // 40 ETH
-    const amountRcnLiquidity = amountEthRcnLiquidity.mul(new BN(20000));      // 800000 RCN
+    const amountEthRcnLiquidity = new BN(40).mul(ETH); // 40 ETH
+    const amountRcnLiquidity = amountEthRcnLiquidity.mul(new BN(20000)); // 800000 RCN
     await rcnToken.setBalance(accounts[9], amountRcnLiquidity);
     await rcnToken.approve(rcnUniswap.address, amountRcnLiquidity, { from: accounts[9] });
     await rcnUniswap.addLiquidity(
@@ -56,15 +67,15 @@ contract('ConverterRamp', function (accounts) {
       MAX_UINT256,
       {
         value: amountRcnLiquidity,
-        from: accounts[9]
+        from: accounts[9],
       }
     );
     // Create DEST Uniswap
     await uniswapFactory.createExchange(destToken.address);
     destUniswap = await UniswapExchange.at(await uniswapFactory.tokenToExchange(destToken.address));
     // Add liquidity 1 ETH => 200 DEST
-    const amountDestLiquidity = new BN(1000000).mul(ETH);                        // 1000000 DEST
-    const amountEthDestLiquidity = amountDestLiquidity.div(new BN(200));         // 5000 ETH
+    const amountDestLiquidity = new BN(1000000).mul(ETH); // 1000000 DEST
+    const amountEthDestLiquidity = amountDestLiquidity.div(new BN(200)); // 5000 ETH
     await destToken.setBalance(accounts[9], amountDestLiquidity);
     await destToken.approve(destUniswap.address, amountDestLiquidity, { from: accounts[9] });
     await destUniswap.addLiquidity(
@@ -73,13 +84,13 @@ contract('ConverterRamp', function (accounts) {
       MAX_UINT256,
       {
         value: amountEthDestLiquidity,
-        from: accounts[9]
+        from: accounts[9],
       }
     );
     // Create UniswapConverter
     uniswapConverter = await UniswapConverter.new(uniswapFactory.address);
   });
-  async function requestLoan(amount, oracle = Helper.address0x) {
+  async function requestLoan (amount, oracle = Helper.address0x) {
     const expiration = MAX_UINT64;
     const data = await model.encodeData(amount, expiration);
 
@@ -110,14 +121,14 @@ contract('ConverterRamp', function (accounts) {
       expiration,
       data,
       {
-        from: creator
+        from: creator,
       }
     );
 
     return id;
   }
 
-  async function lendLoan(id, oracleData = []) {
+  async function lendLoan (id, oracleData = []) {
     const balanceSnap = await Snap.balanceSnap(rcnToken, accounts[8]);
 
     await rcnToken.setBalance(accounts[8], new BN(2).pow(new BN(128)));
@@ -131,7 +142,7 @@ contract('ConverterRamp', function (accounts) {
       [],
       [],
       {
-        from: accounts[8]
+        from: accounts[8],
       }
     );
 
@@ -140,7 +151,7 @@ contract('ConverterRamp', function (accounts) {
 
     return id;
   }
-  it("Shoud lend a loan using ETH, sending the exact amount", async () => {
+  it('Shoud lend a loan using ETH, sending the exact amount', async () => {
     const id = await requestLoan(new BN(1000).mul(ETH));
 
     const estimated = await converterRamp.getLendCost.call(
@@ -155,25 +166,25 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.etherSnap(accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter  
-      ETH_ADDRESS,              // Used token
-      estimated,                // Max token spend
-      Helper.address0x,         // Cosigner address
-      id,                       // Loan ID
-      [],                       // Oracle data
-      [],                       // Cosigner data
-      [],                       // Callback data
+      uniswapConverter.address, // Token converter
+      ETH_ADDRESS, // Used token
+      estimated, // Max token spend
+      Helper.address0x, // Cosigner address
+      id, // Loan ID
+      [], // Oracle data
+      [], // Cosigner data
+      [], // Callback data
       {
         from: accounts[5],
         value: estimated,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
-  it("Shoud lend a loan using ETH, sending extra ETH amount", async () => {
+  it('Shoud lend a loan using ETH, sending extra ETH amount', async () => {
     const id = await requestLoan(new BN(1001).mul(ETH));
 
     const estimated = await converterRamp.getLendCost.call(
@@ -189,25 +200,25 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.etherSnap(accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter  
-      ETH_ADDRESS,              // Used token
-      maxSpend,                 // Max token spend
-      Helper.address0x,         // Cosigner address
-      id,                       // Loan ID
-      [],                       // Oracle data
-      [],                       // Cosigner data
-      [],                       // Callback data
+      uniswapConverter.address, // Token converter
+      ETH_ADDRESS, // Used token
+      maxSpend, // Max token spend
+      Helper.address0x, // Cosigner address
+      id, // Loan ID
+      [], // Oracle data
+      [], // Cosigner data
+      [], // Callback data
       {
         from: accounts[5],
         value: maxSpend,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equal(accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
-  it("Shoud lend a loan using another token, sending the exact amount", async () => {
+  it('Shoud lend a loan using another token, sending the exact amount', async () => {
     const id = await requestLoan(new BN(1000).mul(ETH));
 
     const estimated = await converterRamp.getLendCost.call(
@@ -224,24 +235,24 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter  
-      destToken.address,        // Used token
-      estimated,                // Max token spend
-      Helper.address0x,         // Cosigner address
-      id,                       // Loan ID
-      [],                       // Oracle data
-      [],                       // Cosigner data
-      [],                       // Callback data
+      uniswapConverter.address, // Token converter
+      destToken.address, // Used token
+      estimated, // Max token spend
+      Helper.address0x, // Cosigner address
+      id, // Loan ID
+      [], // Oracle data
+      [], // Cosigner data
+      [], // Callback data
       {
         from: accounts[5],
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
-  it("Shoud lend a loan using another token, sending extra amount", async () => {
+  it('Shoud lend a loan using another token, sending extra amount', async () => {
     const id = await requestLoan(new BN(1000).mul(ETH));
 
     const estimated = await converterRamp.getLendCost.call(
@@ -260,24 +271,24 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter  
-      destToken.address,        // Used token
-      maxSpend,                 // Max token spend
-      Helper.address0x,         // Cosigner address
-      id,                       // Loan ID
-      [],                       // Oracle data
-      [],                       // Cosigner data
-      [],                       // Callback data
+      uniswapConverter.address, // Token converter
+      destToken.address, // Used token
+      maxSpend, // Max token spend
+      Helper.address0x, // Cosigner address
+      id, // Loan ID
+      [], // Oracle data
+      [], // Cosigner data
+      [], // Callback data
       {
         from: accounts[5],
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
-  it("Shoud lend a loan with oracle using ETH, sending the exact amount", async () => {
+  it('Shoud lend a loan with oracle using ETH, sending the exact amount', async () => {
     const id = await requestLoan(new BN(1000).mul(ETH), oracle.address);
     const tokens = new BN(10).pow(new BN(36));
     const equivalent = tokens.div(new BN(2));
@@ -295,25 +306,25 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.etherSnap(accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter  
-      ETH_ADDRESS,              // Used token
-      estimated,                // Max token spend
-      Helper.address0x,         // Cosigner address
-      id,                       // Loan ID
-      oracleData,               // Oracle data
-      [],                       // Cosigner data
-      [],                       // Callback data
+      uniswapConverter.address, // Token converter
+      ETH_ADDRESS, // Used token
+      estimated, // Max token spend
+      Helper.address0x, // Cosigner address
+      id, // Loan ID
+      oracleData, // Oracle data
+      [], // Cosigner data
+      [], // Callback data
       {
         from: accounts[5],
         value: estimated,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
-  it("Shoud lend a loan with oracle using ETH, sending extra ETH amount", async () => {
+  it('Shoud lend a loan with oracle using ETH, sending extra ETH amount', async () => {
     const id = await requestLoan(new BN(1001).mul(ETH));
     const tokens = new BN(10).pow(new BN(18));
     const equivalent = tokens.div(new BN(3));
@@ -332,25 +343,25 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.etherSnap(accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter  
-      ETH_ADDRESS,              // Used token
-      maxSpend,                 // Max token spend
-      Helper.address0x,         // Cosigner address
-      id,                       // Loan ID
-      oracleData,               // Oracle data
-      [],                       // Cosigner data
-      [],                       // Callback data
+      uniswapConverter.address, // Token converter
+      ETH_ADDRESS, // Used token
+      maxSpend, // Max token spend
+      Helper.address0x, // Cosigner address
+      id, // Loan ID
+      oracleData, // Oracle data
+      [], // Cosigner data
+      [], // Callback data
       {
         from: accounts[5],
         value: maxSpend,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equal(accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
-  it("Shoud lend a loan with oracle using another token, sending the exact amount", async () => {
+  it('Shoud lend a loan with oracle using another token, sending the exact amount', async () => {
     const id = await requestLoan(new BN(1000).mul(ETH));
     const tokens = new BN(10).pow(new BN(40));
     const equivalent = tokens.div(new BN(18));
@@ -370,24 +381,24 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter  
-      destToken.address,        // Used token
-      estimated,                // Max token spend
-      Helper.address0x,         // Cosigner address
-      id,                       // Loan ID
-      oracleData,               // Oracle data
-      [],                       // Cosigner data
-      [],                       // Callback data
+      uniswapConverter.address, // Token converter
+      destToken.address, // Used token
+      estimated, // Max token spend
+      Helper.address0x, // Cosigner address
+      id, // Loan ID
+      oracleData, // Oracle data
+      [], // Cosigner data
+      [], // Callback data
       {
         from: accounts[5],
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
-  it("Shoud lend a loan with oracle using another token, sending extra amount", async () => {
+  it('Shoud lend a loan with oracle using another token, sending extra amount', async () => {
     const id = await requestLoan(new BN(1000).mul(ETH));
     const tokens = new BN(10).pow(new BN(40));
     const equivalent = tokens.mul(new BN(18));
@@ -409,24 +420,24 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter  
-      destToken.address,        // Used token
-      maxSpend,                 // Max token spend
-      Helper.address0x,         // Cosigner address
-      id,                       // Loan ID
-      oracleData,               // Oracle data
-      [],                       // Cosigner data
-      [],                       // Callback data
+      uniswapConverter.address, // Token converter
+      destToken.address, // Used token
+      maxSpend, // Max token spend
+      Helper.address0x, // Cosigner address
+      id, // Loan ID
+      oracleData, // Oracle data
+      [], // Cosigner data
+      [], // Callback data
       {
         from: accounts[5],
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
-  it("Shoud pay a loan using ETH, sending the exact amount", async () => {
+  it('Shoud pay a loan using ETH, sending the exact amount', async () => {
     const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
     const payAmount = new BN(100).mul(ETH);
     const estimated = await converterRamp.getPayCost.call(
@@ -441,16 +452,16 @@ contract('ConverterRamp', function (accounts) {
     const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter  
-      ETH_ADDRESS,              // Used token
-      payAmount,                // Amount to pay
-      estimated,                // Max token spend
-      id,                       // Loan ID
-      [],                       // Oracle data
+      uniswapConverter.address, // Token converter
+      ETH_ADDRESS, // Used token
+      payAmount, // Amount to pay
+      estimated, // Max token spend
+      id, // Loan ID
+      [], // Oracle data
       {
         from: accounts[5],
         value: estimated,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
@@ -458,7 +469,7 @@ contract('ConverterRamp', function (accounts) {
     await ethSnap.requireDecrease(estimated);
     await engineSnap.requireIncrease(payAmount);
   });
-  it("Shoud pay a loan using ETH, sending sending extra amount", async () => {
+  it('Shoud pay a loan using ETH, sending sending extra amount', async () => {
     const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
     const payAmount = new BN(100).mul(ETH);
     const estimated = await converterRamp.getPayCost.call(
@@ -474,16 +485,16 @@ contract('ConverterRamp', function (accounts) {
     const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter  
-      ETH_ADDRESS,              // Used token
-      payAmount,                // Amount to pay
-      maxSpend,                 // Max token spend
-      id,                       // Loan ID
-      [],                       // Oracle data
+      uniswapConverter.address, // Token converter
+      ETH_ADDRESS, // Used token
+      payAmount, // Amount to pay
+      maxSpend, // Max token spend
+      id, // Loan ID
+      [], // Oracle data
       {
         from: accounts[5],
         value: maxSpend,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
@@ -491,7 +502,7 @@ contract('ConverterRamp', function (accounts) {
     await ethSnap.requireDecrease(estimated);
     await engineSnap.requireIncrease(payAmount);
   });
-  it("Shoud pay the total amount of a loan using ETH, sending sending extra amount", async () => {
+  it('Shoud pay the total amount of a loan using ETH, sending sending extra amount', async () => {
     const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
     const payAmount = new BN(2000).mul(ETH);
     const realPayment = new BN(1000).mul(ETH);
@@ -508,16 +519,16 @@ contract('ConverterRamp', function (accounts) {
     const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter  
-      ETH_ADDRESS,              // Used token
-      payAmount,                // Amount to pay
-      maxSpend,                 // Max token spend
-      id,                       // Loan ID
-      [],                       // Oracle data
+      uniswapConverter.address, // Token converter
+      ETH_ADDRESS, // Used token
+      payAmount, // Amount to pay
+      maxSpend, // Max token spend
+      id, // Loan ID
+      [], // Oracle data
       {
         from: accounts[5],
         value: maxSpend,
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
@@ -525,7 +536,7 @@ contract('ConverterRamp', function (accounts) {
     await ethSnap.requireDecrease(estimated);
     await engineSnap.requireIncrease(realPayment);
   });
-  it("Shoud pay a loan using another token, sending the exact amount", async () => {
+  it('Shoud pay a loan using another token, sending the exact amount', async () => {
     const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
     const payAmount = new BN(100).mul(ETH);
     const estimated = await converterRamp.getPayCost.call(
@@ -542,15 +553,15 @@ contract('ConverterRamp', function (accounts) {
     const balanceSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter  
-      destToken.address,        // Used token
-      payAmount,                // Amount to pay
-      estimated,                // Max token spend
-      id,                       // Loan ID
-      [],                       // Oracle data
+      uniswapConverter.address, // Token converter
+      destToken.address, // Used token
+      payAmount, // Amount to pay
+      estimated, // Max token spend
+      id, // Loan ID
+      [], // Oracle data
       {
         from: accounts[5],
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
@@ -558,7 +569,7 @@ contract('ConverterRamp', function (accounts) {
     await balanceSnap.requireDecrease(estimated);
     await engineSnap.requireIncrease(payAmount);
   });
-  it("Shoud pay a loan using another token, sending sending extra amount", async () => {
+  it('Shoud pay a loan using another token, sending sending extra amount', async () => {
     const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
     const payAmount = new BN(100).mul(ETH);
     const estimated = await converterRamp.getPayCost.call(
@@ -576,15 +587,15 @@ contract('ConverterRamp', function (accounts) {
     const balanceSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter  
-      destToken.address,        // Used token
-      payAmount,                // Amount to pay
-      maxSpend,                 // Max token spend
-      id,                       // Loan ID
-      [],                       // Oracle data
+      uniswapConverter.address, // Token converter
+      destToken.address, // Used token
+      payAmount, // Amount to pay
+      maxSpend, // Max token spend
+      id, // Loan ID
+      [], // Oracle data
       {
         from: accounts[5],
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
@@ -592,7 +603,7 @@ contract('ConverterRamp', function (accounts) {
     await balanceSnap.requireDecrease(estimated);
     await engineSnap.requireIncrease(payAmount);
   });
-  it("Shoud pay the total amount of a loan using another token, sending sending extra amount", async () => {
+  it('Shoud pay the total amount of a loan using another token, sending sending extra amount', async () => {
     const id = await lendLoan(await requestLoan(new BN(1000).mul(ETH)));
     const payAmount = new BN(2000).mul(ETH);
     const realPayment = new BN(1000).mul(ETH);
@@ -611,15 +622,15 @@ contract('ConverterRamp', function (accounts) {
     const balanceSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter  
-      destToken.address,        // Used token
-      payAmount,                // Amount to pay
-      maxSpend,                 // Max token spend
-      id,                       // Loan ID
-      [],                       // Oracle data
+      uniswapConverter.address, // Token converter
+      destToken.address, // Used token
+      payAmount, // Amount to pay
+      maxSpend, // Max token spend
+      id, // Loan ID
+      [], // Oracle data
       {
         from: accounts[5],
-        gasPrice: new BN(0)
+        gasPrice: new BN(0),
       }
     );
 
@@ -627,5 +638,4 @@ contract('ConverterRamp', function (accounts) {
     await balanceSnap.requireDecrease(estimated);
     await engineSnap.requireIncrease(realPayment);
   });
-
 });
