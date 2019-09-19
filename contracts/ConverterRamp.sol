@@ -243,6 +243,17 @@ contract ConverterRamp is Ownable {
         return tokens.mul(_amount).divRound(equivalent);
     }
 
+    function getPriceConvertTo(
+        TokenConverter _converter,
+        IERC20 _fromToken,
+        uint256 _amount
+    ) external view returns (uint256) {
+        return _converter.getPriceConvertTo(
+            _fromToken,
+            token,
+            _amount
+        );
+    }
 
     function _convertAndReturn(
         TokenConverter _converter,
