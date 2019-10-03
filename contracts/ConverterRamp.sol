@@ -240,7 +240,7 @@ contract ConverterRamp is Ownable {
         (uint256 tokens, uint256 equivalent) = RateOracle(_oracle).readSample(_oracleData);
 
         emit ReadedOracle(_oracle, tokens, equivalent);
-        return tokens.mul(_amount).divRound(equivalent);
+        return tokens.mul(_amount).divCeil(equivalent);
     }
 
     function getPriceConvertTo(
