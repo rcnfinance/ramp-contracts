@@ -1,5 +1,5 @@
 /* solium-disable */
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 library SafeMath {
     using SafeMath for uint256;

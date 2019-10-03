@@ -1,7 +1,7 @@
 
 // File: contracts/interfaces/IERC20.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 interface IERC20 {
@@ -15,7 +15,7 @@ interface IERC20 {
 
 // File: contracts/interfaces/IERC165.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 interface IERC165 {
@@ -30,7 +30,7 @@ interface IERC165 {
 
 // File: contracts/core/diaspore/interfaces/Model.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
@@ -355,7 +355,7 @@ contract Model is IERC165 {
 
 // File: contracts/core/diaspore/interfaces/RateOracle.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
@@ -419,7 +419,7 @@ contract RateOracle is IERC165 {
 
 // File: contracts/utils/IsContract.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 library IsContract {
@@ -432,7 +432,7 @@ library IsContract {
 
 // File: contracts/utils/SafeMath.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 library SafeMath {
@@ -472,7 +472,7 @@ library SafeMath {
 
 // File: contracts/commons/ERC165.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
@@ -527,7 +527,7 @@ contract ERC165 is IERC165 {
 
 // File: contracts/commons/ERC721Base.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
@@ -1025,7 +1025,7 @@ contract ERC721Base is ERC165 {
 
 // File: contracts/interfaces/IERC173.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 /// @title ERC-173 Contract Ownership Standard
@@ -1046,7 +1046,7 @@ contract IERC173 {
 
 // File: contracts/commons/Ownable.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
@@ -1081,7 +1081,7 @@ contract Ownable is IERC173 {
 
 // File: contracts/core/diaspore/DebtEngine.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
@@ -1793,7 +1793,7 @@ contract DebtEngine is ERC721Base, Ownable {
 
 // File: contracts/core/diaspore/interfaces/LoanApprover.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
@@ -1847,7 +1847,7 @@ contract LoanApprover is IERC165 {
 
 // File: contracts/core/diaspore/interfaces/LoanCallback.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 interface LoanCallback {
@@ -1869,7 +1869,7 @@ interface LoanCallback {
 
 // File: contracts/interfaces/Cosigner.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 /**
@@ -1932,7 +1932,7 @@ contract Cosigner {
 
 // File: contracts/utils/ImplementsInterface.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 library ImplementsInterface {
@@ -1983,7 +1983,7 @@ library ImplementsInterface {
 
 // File: contracts/utils/BytesUtils.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 contract BytesUtils {
@@ -2176,7 +2176,7 @@ contract BytesUtils {
 
 // File: contracts/core/diaspore/LoanManager.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 

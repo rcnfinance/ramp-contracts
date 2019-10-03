@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 /// https:///docs.uniswap.io/smart-contract-integration/interface
 contract UniswapExchange {
