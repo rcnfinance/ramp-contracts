@@ -1,7 +1,7 @@
 
 // File: contracts/interfaces/IERC165.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 interface IERC165 {
@@ -16,7 +16,7 @@ interface IERC165 {
 
 // File: contracts/commons/ERC165.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
@@ -71,7 +71,7 @@ contract ERC165 is IERC165 {
 
 // File: contracts/interfaces/IERC173.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 /// @title ERC-173 Contract Ownership Standard
@@ -92,7 +92,7 @@ contract IERC173 {
 
 // File: contracts/commons/Ownable.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
@@ -127,7 +127,7 @@ contract Ownable is IERC173 {
 
 // File: contracts/utils/BytesUtils.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 contract BytesUtils {
@@ -321,7 +321,7 @@ contract BytesUtils {
 // File: contracts/test_utils/diaspore/TestModel.sol
 
 /* solium-disable */
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 

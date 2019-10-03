@@ -1,7 +1,7 @@
 
 // File: contracts/interfaces/IERC165.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 interface IERC165 {
@@ -16,7 +16,7 @@ interface IERC165 {
 
 // File: contracts/core/diaspore/interfaces/RateOracle.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
@@ -80,7 +80,7 @@ contract RateOracle is IERC165 {
 
 // File: contracts/commons/ERC165.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
@@ -135,7 +135,7 @@ contract ERC165 is IERC165 {
 
 // File: contracts/utils/BytesUtils.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 contract BytesUtils {
@@ -328,7 +328,7 @@ contract BytesUtils {
 
 // File: contracts/test_utils/diaspore/TestRateOracle.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.5.12;
 
 
 
