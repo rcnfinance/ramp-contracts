@@ -74,7 +74,7 @@ jobs:
             # Start ganache
             - run:
                 name: Start ganache instance
-                command: node_modules/.bin/ganache-cli --gasLimit 7000000
+                command: node_modules/.bin/ganache-cli --gasLimit 7000000 -e 1000000000000
                 background: true
             # Run truffle test
             - run:
@@ -82,51 +82,52 @@ jobs:
                 command: node_modules/.bin/truffle test
 
     # The coverage job
-    coverage:
-        working_directory: ~/project
-        docker:
-            - image: circleci/node:8.12
-        steps:
-            # Checkout the code from the branch into the working_directory
-            - checkout
-            # Log the current branch
-            - run:
-                name: Show current branch
-                command: echo ${CIRCLE_BRANCH}
-            # Restore local dependencies from cache
-            - restore_cache:
-                keys:
-                - v2-dependencies-{{ checksum "package.json" }}
-                - v2-dependencies-
-            # Start test-rpc
-            - run:
-                name: Start Macaron instance
-                no_output_timeout: 30m
-                background: true
-                command: |
-                    node_modules/.bin/macaron-cli \
-                    --emitFreeLogs true \
-                    --gasLimit 0xfffffffffffff \
-                    --allowUnlimitedContractSize true \
-                    --debugTopics ./.solidity_coverage/.source_topics \
-                    --dumpLogs ./.solidity_coverage/.all_events \
-                    --port 8555
-            # Run coverage
-            - run:
-                name: rp-solidity-coverage
-                environment:
-                  SOLIDITY_COVERAGE: true
-                no_output_timeout: 30m
-                command: node_modules/.bin/rp-solidity-coverage
-            # Upload results
-            #- run:
-            #    name: Upload coverage to coveralls
-            #    command: cat coverage/lcov.info | node_modules/.bin/coveralls
-            # TODO (jpgonzalezra)
+    # coverage:
+    #     working_directory: ~/project
+    #     docker:
+    #         - image: circleci/node:8.12
+    #     steps:
+    #         # Checkout the code from the branch into the working_directory
+    #         - checkout
+    #         # Log the current branch
+    #         - run:
+    #             name: Show current branch
+    #             command: echo ${CIRCLE_BRANCH}
+    #         # Restore local dependencies from cache
+    #         - restore_cache:
+    #             keys:
+    #             - v2-dependencies-{{ checksum "package.json" }}
+    #             - v2-dependencies-
+    #         # Start test-rpc
+    #         - run:
+    #             name: Start Macaron instance
+    #             no_output_timeout: 30m
+    #             background: true
+    #             command: |
+    #                 node_modules/.bin/macaron-cli \
+    #                 --emitFreeLogs true \
+    #                 --gasLimit 0xfffffffffffff \
+    #                 --allowUnlimitedContractSize true \
+    #                 --debugTopics ./.solidity_coverage/.source_topics \
+    #                 --dumpLogs ./.solidity_coverage/.all_events \
+    #                 --port 8555 \
+    #                 -e 1000000000000
+    #         # Run coverage
+    #         - run:
+    #             name: rp-solidity-coverage
+    #             environment:
+    #               SOLIDITY_COVERAGE: true
+    #             no_output_timeout: 30m
+    #             command: node_modules/.bin/rp-solidity-coverage
+    #         # Upload results
+    #         #- run:
+    #         #    name: Upload coverage to coveralls
+    #         #    command: cat coverage/lcov.info | node_modules/.bin/coveralls
+    #         # TODO (jpgonzalezra)
 
-            # Save artifacts
-            - store_artifacts:
-                path: coverage
+    #         # Save artifacts
+    #         - store_artifacts:
+    #             path: coverage
 
     # The lint-javascript job
     lint-javascript:
@@ -182,9 +183,6 @@ workflows:
                 requires:
                     - install
             - test:
-                requires:
-                    - install
-            - coverage:
                 requires:
                     - install
             - lint-javascript:

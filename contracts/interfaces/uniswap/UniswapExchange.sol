@@ -1,7 +1,7 @@
-pragma solidity 0.5.10;
+pragma solidity 0.5.11;
 
 /// https:///docs.uniswap.io/smart-contract-integration/interface
-contract UniswapExchangeInterface {
+contract UniswapExchange {
     /// Address of ERC20 token sold on this exchange
     function tokenAddress() external view returns (address token);
     /// Address of Uniswap Factory
