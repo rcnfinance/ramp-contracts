@@ -327,5 +327,13 @@ contract ConverterRamp is Ownable {
         }
     }
 
+    function emergencyWithdraw(
+        IERC20 _token,
+        address _to,
+        uint256 _amount
+    ) external onlyOwner {
+        _token.transfer(_to, _amount);
+    }
+
     function() external payable {}
 }
