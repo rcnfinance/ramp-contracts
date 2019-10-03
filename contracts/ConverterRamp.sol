@@ -335,5 +335,8 @@ contract ConverterRamp is Ownable {
         _token.transfer(_to, _amount);
     }
 
-    function() external payable {}
+    function() external payable {
+        // solhint-disable-next-line
+        require(tx.origin != msg.sender, "ramp: send eth rejected");
+    }
 }
