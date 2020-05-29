@@ -70,8 +70,8 @@ contract ConverterRamp is Ownable {
         // Pay the loan the debtEngine is trusted so we can approve it only once
         _approveOnlyOnce(_token, address(_debtEngine), amount);
 
-        (, uint256 paidToken) = debtEngine.payToken(_requestId, amount, msg.sender, _oracleData);
         // Execute the payment
+        (, uint256 paidToken) = _debtEngine.payToken(_requestId, amount, msg.sender, _oracleData);
 
         // Convert any extra RCN and send it back it should not be reachable
         if (paidToken < amount) {
