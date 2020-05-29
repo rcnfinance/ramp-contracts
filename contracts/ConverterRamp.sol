@@ -88,7 +88,8 @@ contract ConverterRamp is Ownable {
         TokenConverter _converter,
         IERC20 _fromToken,
         uint256 _maxSpend,
-        address _cosigner,
+        Cosigner _cosigner,
+        uint256 _cosignerLimitCost,
         bytes32 _requestId,
         bytes memory _oracleData,
         bytes memory _cosignerData,
@@ -120,8 +121,8 @@ contract ConverterRamp is Ownable {
         _loanManager.lend(
             _requestId,
             _oracleData,
-            _cosigner,
-            0,
+            address(_cosigner),
+            _cosignerLimitCost,
             _cosignerData,
             _callbackData
         );
@@ -133,7 +134,7 @@ contract ConverterRamp is Ownable {
     function getLendCost(
         TokenConverter _converter,
         IERC20 _fromToken,
-        address _cosigner,
+        Cosigner _cosigner,
         bytes32 _requestId,
         bytes calldata _oracleData,
         bytes calldata _cosignerData
@@ -178,20 +179,24 @@ contract ConverterRamp is Ownable {
     /// @notice returns how much RCN is required for a given lend
     function getRequiredRcnLend(
         LoanManager _loanManager,
-        address _lenderCosignerAddress,
+        Cosigner _lenderCosignerAddress,
         bytes32 _requestId,
         bytes memory _oracleData,
         bytes memory _cosignerData
     ) internal returns (uint256) {
-
         // Load request amount
         uint256 amount = loanManager.getAmount(_requestId);
 
-        /// load cosigner of loan
-        Cosigner cosigner = Cosigner(_lenderCosignerAddress);
-        if (_lenderCosignerAddress != address(0)) {
-            amount = amount.add(cosigner.cost(address(_loanManager), uint256(_requestId), _cosignerData, _oracleData));
         // If loan has a cosigner, sum the cost
+        if (_lenderCosignerAddress != Cosigner(0)) {
+            amount = amount.add(
+                _lenderCosignerAddress.cost(
+                    address(_loanManager),
+                    uint256(_requestId),
+                    _cosignerData,
+                    _oracleData
+                )
+            );
         }
 
         // Load the  Oracle rate and convert required

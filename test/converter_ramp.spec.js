@@ -167,13 +167,14 @@ contract('ConverterRamp', function (accounts) {
 
     await converterRamp.lend(
       uniswapConverter.address, // Token converter
-      ETH_ADDRESS, // Used token
-      estimated, // Max token spend
-      Helper.address0x, // Cosigner address
-      id, // Loan ID
-      [], // Oracle data
-      [], // Cosigner data
-      [], // Callback data
+      ETH_ADDRESS,              // Used token
+      estimated,                // Max token spend
+      Helper.address0x,         // Cosigner address
+      0,                        // Cosigner limit cost
+      id,                       // Loan ID
+      [],                       // Oracle data
+      [],                       // Cosigner data
+      [],                       // Callback data
       {
         from: accounts[5],
         value: estimated,
@@ -201,13 +202,14 @@ contract('ConverterRamp', function (accounts) {
 
     await converterRamp.lend(
       uniswapConverter.address, // Token converter
-      ETH_ADDRESS, // Used token
-      maxSpend, // Max token spend
-      Helper.address0x, // Cosigner address
-      id, // Loan ID
-      [], // Oracle data
-      [], // Cosigner data
-      [], // Callback data
+      ETH_ADDRESS,              // Used token
+      maxSpend,                 // Max token spend
+      Helper.address0x,         // Cosigner address
+      0,                        // Cosigner limit cost
+      id,                       // Loan ID
+      [],                       // Oracle data
+      [],                       // Cosigner data
+      [],                       // Callback data
       {
         from: accounts[5],
         value: maxSpend,
@@ -236,13 +238,14 @@ contract('ConverterRamp', function (accounts) {
 
     await converterRamp.lend(
       uniswapConverter.address, // Token converter
-      destToken.address, // Used token
-      estimated, // Max token spend
-      Helper.address0x, // Cosigner address
-      id, // Loan ID
-      [], // Oracle data
-      [], // Cosigner data
-      [], // Callback data
+      destToken.address,        // Used token
+      estimated,                // Max token spend
+      Helper.address0x,         // Cosigner address
+      0,                        // Cosigner limit cost
+      id,                       // Loan ID
+      [],                       // Oracle data
+      [],                       // Cosigner data
+      [],                       // Callback data
       {
         from: accounts[5],
         gasPrice: new BN(0),
@@ -272,13 +275,14 @@ contract('ConverterRamp', function (accounts) {
 
     await converterRamp.lend(
       uniswapConverter.address, // Token converter
-      destToken.address, // Used token
-      maxSpend, // Max token spend
-      Helper.address0x, // Cosigner address
-      id, // Loan ID
-      [], // Oracle data
-      [], // Cosigner data
-      [], // Callback data
+      destToken.address,        // Used token
+      maxSpend,                 // Max token spend
+      Helper.address0x,         // Cosigner address
+      0,                        // Cosigner limit cost
+      id,                       // Loan ID
+      [],                       // Oracle data
+      [],                       // Cosigner data
+      [],                       // Callback data
       {
         from: accounts[5],
         gasPrice: new BN(0),
@@ -307,13 +311,14 @@ contract('ConverterRamp', function (accounts) {
 
     await converterRamp.lend(
       uniswapConverter.address, // Token converter
-      ETH_ADDRESS, // Used token
-      estimated, // Max token spend
-      Helper.address0x, // Cosigner address
-      id, // Loan ID
-      oracleData, // Oracle data
-      [], // Cosigner data
-      [], // Callback data
+      ETH_ADDRESS,              // Used token
+      estimated,                // Max token spend
+      Helper.address0x,         // Cosigner address
+      0,                        // Cosigner limit cost
+      id,                       // Loan ID
+      oracleData,               // Oracle data
+      [],                       // Cosigner data
+      [],                       // Callback data
       {
         from: accounts[5],
         value: estimated,
@@ -344,13 +349,14 @@ contract('ConverterRamp', function (accounts) {
 
     await converterRamp.lend(
       uniswapConverter.address, // Token converter
-      ETH_ADDRESS, // Used token
-      maxSpend, // Max token spend
-      Helper.address0x, // Cosigner address
-      id, // Loan ID
-      oracleData, // Oracle data
-      [], // Cosigner data
-      [], // Callback data
+      ETH_ADDRESS,              // Used token
+      maxSpend,                 // Max token spend
+      Helper.address0x,         // Cosigner address
+      0,                        // Cosigner limit cost
+      id,                       // Loan ID
+      oracleData,               // Oracle data
+      [],                       // Cosigner data
+      [],                       // Callback data
       {
         from: accounts[5],
         value: maxSpend,
@@ -382,13 +388,14 @@ contract('ConverterRamp', function (accounts) {
 
     await converterRamp.lend(
       uniswapConverter.address, // Token converter
-      destToken.address, // Used token
-      estimated, // Max token spend
-      Helper.address0x, // Cosigner address
-      id, // Loan ID
-      oracleData, // Oracle data
-      [], // Cosigner data
-      [], // Callback data
+      destToken.address,        // Used token
+      estimated,                // Max token spend
+      Helper.address0x,         // Cosigner address
+      0,                        // Cosigner limit cost
+      id,                       // Loan ID
+      oracleData,               // Oracle data
+      [],                       // Cosigner data
+      [],                       // Callback data
       {
         from: accounts[5],
         gasPrice: new BN(0),
@@ -421,13 +428,14 @@ contract('ConverterRamp', function (accounts) {
 
     await converterRamp.lend(
       uniswapConverter.address, // Token converter
-      destToken.address, // Used token
-      maxSpend, // Max token spend
-      Helper.address0x, // Cosigner address
-      id, // Loan ID
-      oracleData, // Oracle data
-      [], // Cosigner data
-      [], // Callback data
+      destToken.address,        // Used token
+      maxSpend,                 // Max token spend
+      Helper.address0x,         // Cosigner address
+      0,                        // Cosigner limit cost
+      id,                       // Loan ID
+      oracleData,               // Oracle data
+      [],                       // Cosigner data
+      [],                       // Callback data
       {
         from: accounts[5],
         gasPrice: new BN(0),
