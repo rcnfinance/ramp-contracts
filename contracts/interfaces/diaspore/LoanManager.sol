@@ -3,6 +3,7 @@ pragma solidity 0.5.12;
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "./DebtEngine.sol";
 
+
 contract LoanManager {
     IERC20 public token;
 

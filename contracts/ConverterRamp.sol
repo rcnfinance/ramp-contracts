@@ -47,10 +47,9 @@ contract ConverterRamp is Ownable {
         bytes32 _requestId,
         bytes calldata _oracleData
     ) external payable {
-        /// load RCN IERC20, we need it to pay
         DebtEngine _debtEngine = debtEngine;
 
-        /// get amount required, in RCN, for payment
+        // Get amount required, in RCN, for payment
         uint256 amount = getRequiredRcnPay(
             _debtEngine,
             _requestId,
@@ -68,17 +67,13 @@ contract ConverterRamp is Ownable {
             _maxSpend
         );
 
-        // Pay the loan
-        // the debtEngine is trusted
-        // so we can approve it only once
+        // Pay the loan the debtEngine is trusted so we can approve it only once
         _approveOnlyOnce(_token, address(_debtEngine), amount);
 
-        // execute the payment
         (, uint256 paidToken) = debtEngine.payToken(_requestId, amount, msg.sender, _oracleData);
+        // Execute the payment
 
-        // Convert any extra RCN
-        // and send it back
-        // it should not be reachable
+        // Convert any extra RCN and send it back it should not be reachable
         if (paidToken < amount) {
             _convertAndReturn(
                 _converter,
@@ -99,10 +94,9 @@ contract ConverterRamp is Ownable {
         bytes memory _cosignerData,
         bytes memory _callbackData
     ) public payable {
-        /// load RCN IERC20
         LoanManager _loanManager = loanManager;
 
-        /// get required RCN for lending the loan
+        // Get required RCN for lending the loan
         uint256 amount = getRequiredRcnLend(
             _loanManager,
             _cosigner,
@@ -120,8 +114,7 @@ contract ConverterRamp is Ownable {
             _maxSpend
         );
 
-        // approve token to loan manager only once
-        // the loan manager is trusted
+        // Approve token to loan manager only once the loan manager is trusted
         _approveOnlyOnce(_token, address(_loanManager), amount);
 
         _loanManager.lend(
@@ -133,7 +126,7 @@ contract ConverterRamp is Ownable {
             _callbackData
         );
 
-        // /// transfer loan to msg.sender
+        // Transfer loan to the msg.sender
         debtEngine.transferFrom(address(this), msg.sender, uint256(_requestId));
     }
 
@@ -191,19 +184,19 @@ contract ConverterRamp is Ownable {
         bytes memory _cosignerData
     ) internal returns (uint256) {
 
-        /// load loan manager and id
+        // Load request amount
         uint256 amount = loanManager.getAmount(_requestId);
 
         /// load cosigner of loan
         Cosigner cosigner = Cosigner(_lenderCosignerAddress);
-
-        /// if loan has a cosigner, sum the cost
         if (_lenderCosignerAddress != address(0)) {
             amount = amount.add(cosigner.cost(address(_loanManager), uint256(_requestId), _cosignerData, _oracleData));
+        // If loan has a cosigner, sum the cost
         }
 
-        /// load the  Oracle rate and convert required
+        // Load the  Oracle rate and convert required
         address oracle = loanManager.getOracle(uint256(_requestId));
+
         return getCurrencyToToken(oracle, amount, _oracleData);
     }
 
@@ -222,7 +215,7 @@ contract ConverterRamp is Ownable {
             _amount
         );
 
-        /// Read loan oracle
+        // Read loan oracle
         return getCurrencyToToken(address(oracle), amount, _oracleData);
     }
 

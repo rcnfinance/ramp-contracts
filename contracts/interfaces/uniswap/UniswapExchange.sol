@@ -1,5 +1,6 @@
 pragma solidity 0.5.12;
 
+
 /// https:///docs.uniswap.io/smart-contract-integration/interface
 contract UniswapExchange {
     /// Address of ERC20 token sold on this exchange
