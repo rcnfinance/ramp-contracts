@@ -17,7 +17,9 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 * Since versions of Solidity 0.4.22 the EVM has a new opcode, called RETURNDATASIZE.
 * This opcode stores the size of the returned data of an external call. The code checks the size of the return value
 * after an external call and reverts the transaction in case the return data is shorter than expected
-* https://github.com/nachomazzara/SafeERC20/blob/master/contracts/libs/SafeERC20.sol
+*
+* Source: https://github.com/nachomazzara/SafeERC20/blob/master/contracts/libs/SafeERC20.sol
+* Author: Ignacio Mazzara
 */
 library SafeERC20 {
     /**
@@ -35,16 +37,12 @@ library SafeERC20 {
             return false;
         }
 
-        (bool success,) = address(_token).call(
+        address(_token).call(
             abi.encodeWithSignature("transfer(address,uint256)", _to, _value)
         );
 
-        if (!success || prevBalance - _value != _token.balanceOf(address(this))) {
-            // Transfer failed
-            return false;
-        }
-
-        return true;
+        // Fail if the new balance its not equal than previous balance sub _value
+        return prevBalance - _value == _token.balanceOf(address(this));
     }
 
     /**
@@ -64,26 +62,19 @@ library SafeERC20 {
     {
         uint256 prevBalance = _token.balanceOf(_from);
 
-        if (prevBalance < _value) {
-            // Insufficient funds
+        if (
+          prevBalance < _value || // Insufficient funds
+          _token.allowance(_from, address(this)) < _value // Insufficient allowance
+        ) {
             return false;
         }
 
-        if (_token.allowance(_from, address(this)) < _value) {
-            // Insufficient allowance
-            return false;
-        }
-
-        (bool success,) = address(_token).call(
+        address(_token).call(
             abi.encodeWithSignature("transferFrom(address,address,uint256)", _from, _to, _value)
         );
 
-        if (!success || prevBalance - _value != _token.balanceOf(_from)) {
-            // Transfer failed
-            return false;
-        }
-
-        return true;
+        // Fail if the new balance its not equal than previous balance sub _value
+        return prevBalance - _value == _token.balanceOf(_from);
     }
 
    /**
@@ -91,7 +82,7 @@ library SafeERC20 {
    *
    * Beware that changing an allowance with this method brings the risk that someone may use both the old
    * and the new allowance by unfortunate transaction ordering. One possible solution to mitigate this
-   * race condition is to first reduce the spender"s allowance to 0 and set the desired value afterwards:
+   * race condition is to first reduce the spender's allowance to 0 and set the desired value afterwards:
    * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
    *
    * @param _token erc20 The address of the ERC20 contract
@@ -100,16 +91,12 @@ library SafeERC20 {
    * @return bool whether the approve was successful or not
    */
     function safeApprove(IERC20 _token, address _spender, uint256 _value) internal returns (bool) {
-        (bool success,) = address(_token).call(
+        address(_token).call(
             abi.encodeWithSignature("approve(address,uint256)",_spender, _value)
         );
 
-        if (!success && _token.allowance(address(this), _spender) != _value) {
-            // Approve failed
-            return false;
-        }
-
-        return true;
+        // Fail if the new allowance its not equal than _value
+        return _token.allowance(address(this), _spender) == _value;
     }
 
    /**
