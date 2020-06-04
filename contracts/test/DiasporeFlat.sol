@@ -1,425 +1,11 @@
+pragma solidity ^0.6.6;
 
-// File: contracts/interfaces/IERC20.sol
+import '../interfaces/IERC20.sol';
+import '../interfaces/rcn/IRateOracle.sol';
+import '../interfaces/rcn/IModel.sol';
 
-pragma solidity ^0.5.12;
-
-
-interface IERC20 {
-    function transfer(address _to, uint _value) external returns (bool success);
-    function transferFrom(address _from, address _to, uint256 _value) external returns (bool success);
-    function allowance(address _owner, address _spender) external view returns (uint256 remaining);
-    function approve(address _spender, uint256 _value) external returns (bool success);
-    function increaseApproval (address _spender, uint _addedValue) external returns (bool success);
-    function balanceOf(address _owner) external view returns (uint256 balance);
-}
-
-// File: contracts/interfaces/IERC165.sol
-
-pragma solidity ^0.5.12;
-
-
-interface IERC165 {
-    /// @notice Query if a contract implements an interface
-    /// @param interfaceID The interface identifier, as specified in ERC-165
-    /// @dev Interface identification is specified in ERC-165. This function
-    ///  uses less than 30,000 gas.
-    /// @return `true` if the contract implements `interfaceID` and
-    ///  `interfaceID` is not 0xffffffff, `false` otherwise
-    function supportsInterface(bytes4 interfaceID) external view returns (bool);
-}
-
-// File: contracts/core/diaspore/interfaces/Model.sol
-
-pragma solidity ^0.5.12;
-
-
-
-/**
-    The abstract contract Model defines the whole lifecycle of a debt on the DebtEngine.
-
-    Models can be used without previous approbation, this is meant
-    to avoid centralization on the development of RCN; this implies that not all models are secure.
-    Models can have back-doors, bugs and they have not guarantee of being autonomous.
-
-    The DebtEngine is meant to be the User of this model,
-    so all the methods with the ability to perform state changes should only be callable by the DebtEngine.
-
-    All models should implement the 0xaf498c35 interface.
-
-    @author Agustin Aguilar
-*/
-contract Model is IERC165 {
-    // ///
-    // Events
-    // ///
-
-    /**
-        @dev This emits when create a new debt.
-    */
-    event Created(bytes32 indexed _id);
-
-    /**
-        @dev This emits when the status of debt change.
-
-        @param _timestamp Timestamp of the registry
-        @param _status New status of the registry
-    */
-    event ChangedStatus(bytes32 indexed _id, uint256 _timestamp, uint256 _status);
-
-    /**
-        @dev This emits when the obligation of debt change.
-
-        @param _timestamp Timestamp of the registry
-        @param _debt New debt of the registry
-    */
-    event ChangedObligation(bytes32 indexed _id, uint256 _timestamp, uint256 _debt);
-
-    /**
-        @dev This emits when the frequency of debt change.
-
-        @param _timestamp Timestamp of the registry
-        @param _frequency New frequency of each installment
-    */
-    event ChangedFrequency(bytes32 indexed _id, uint256 _timestamp, uint256 _frequency);
-
-    /**
-        @param _timestamp Timestamp of the registry
-    */
-    event ChangedDueTime(bytes32 indexed _id, uint256 _timestamp, uint256 _status);
-
-    /**
-        @param _timestamp Timestamp of the registry
-        @param _dueTime New dueTime of each installment
-    */
-    event ChangedFinalTime(bytes32 indexed _id, uint256 _timestamp, uint64 _dueTime);
-
-    /**
-        @dev This emits when the call addDebt function.
-
-        @param _amount New amount of the debt, old amount plus added
-    */
-    event AddedDebt(bytes32 indexed _id, uint256 _amount);
-
-    /**
-        @dev This emits when the call addPaid function.
-
-        If the registry is fully paid on the call and the amount parameter exceeds the required
-            payment amount, the event emits the real amount paid on the payment.
-
-        @param _paid Real amount paid
-    */
-    event AddedPaid(bytes32 indexed _id, uint256 _paid);
-
-    // Model interface selector
-    bytes4 internal constant MODEL_INTERFACE = 0xaf498c35;
-
-    uint256 public constant STATUS_ONGOING = 1;
-    uint256 public constant STATUS_PAID = 2;
-    uint256 public constant STATUS_ERROR = 4;
-
-    // ///
-    // Meta
-    // ///
-
-    /**
-        @return Identifier of the model
-    */
-    function modelId() external view returns (bytes32);
-
-    /**
-        Returns the address of the contract used as Descriptor of the model
-
-        @dev The descriptor contract should follow the ModelDescriptor.sol scheme
-
-        @return Address of the descriptor
-    */
-    function descriptor() external view returns (address);
-
-    /**
-        If called for any address with the ability to modify the state of the model registries,
-            this method should return True.
-
-        @dev Some contracts may check if the DebtEngine is
-            an operator to know if the model is operative or not.
-
-        @param operator Address of the target request operator
-
-        @return True if operator is able to modify the state of the model
-    */
-    function isOperator(address operator) external view returns (bool canOperate);
-
-    /**
-        Validates the data for the creation of a new registry, if returns True the
-            same data should be compatible with the create method.
-
-        @dev This method can revert the call or return false, and both meant an invalid data.
-
-        @param data Data to validate
-
-        @return True if the data can be used to create a new registry
-    */
-    function validate(bytes calldata data) external view returns (bool isValid);
-
-    // ///
-    // Getters
-    // ///
-
-    /**
-        Exposes the current status of the registry. The possible values are:
-
-        1: Ongoing - The debt is still ongoing and waiting to be paid
-        2: Paid - The debt is already paid and
-        4: Error - There was an Error with the registry
-
-        @dev This method should always be called by the DebtEngine
-
-        @param id Id of the registry
-
-        @return The current status value
-    */
-    function getStatus(bytes32 id) external view returns (uint256 status);
-
-    /**
-        Returns the total paid amount on the registry.
-
-        @dev it should equal to the sum of all real addPaid
-
-        @param id Id of the registry
-
-        @return Total paid amount
-    */
-    function getPaid(bytes32 id) external view returns (uint256 paid);
-
-    /**
-        If the returned amount does not depend on any interactions and only on the model logic,
-            the defined flag will be True; if the amount is an estimation of the future debt,
-            the flag will be set to False.
-
-        If timestamp equals the current moment, the defined flag should always be True.
-
-        @dev This can be a gas-intensive method to call, consider calling the run method before.
-
-        @param id Id of the registry
-        @param timestamp Timestamp of the obligation query
-
-        @return amount Amount pending to pay on the given timestamp
-        @return defined True If the amount returned is fixed and can't change
-    */
-    function getObligation(bytes32 id, uint64 timestamp) external view returns (uint256 amount, bool defined);
-
-    /**
-        The amount required to fully paid a registry.
-
-        All registries should be payable in a single time, even when it has multiple installments.
-
-        If the registry discounts interest for early payment, those discounts should be
-            taken into account in the returned amount.
-
-        @dev This can be a gas-intensive method to call, consider calling the run method before.
-
-        @param id Id of the registry
-
-        @return amount Amount required to fully paid the loan on the current timestamp
-    */
-    function getClosingObligation(bytes32 id) external view returns (uint256 amount);
-
-    /**
-        The timestamp of the next required payment.
-
-        After this moment, if the payment goal is not met the debt will be considered overdue.
-
-            The getObligation method can be used to know the required payment on the future timestamp.
-
-        @param id Id of the registry
-
-        @return timestamp The timestamp of the next due time
-    */
-    function getDueTime(bytes32 id) external view returns (uint256 timestamp);
-
-    // ///
-    // Metadata
-    // ///
-
-    /**
-        If the loan has multiple installments returns the duration of each installment in seconds,
-            if the loan has not installments it should return 1.
-
-        @param id Id of the registry
-
-        @return frequency Frequency of each installment
-    */
-    function getFrequency(bytes32 id) external view returns (uint256 frequency);
-
-    /**
-        If the loan has multiple installments returns the total of installments,
-            if the loan has not installments it should return 1.
-
-        @param id Id of the registry
-
-        @return installments Total of installments
-    */
-    function getInstallments(bytes32 id) external view returns (uint256 installments);
-
-    /**
-        The registry could be paid before or after the date, but the debt will always be
-            considered overdue if paid after this timestamp.
-
-        This is the estimated final payment date of the debt if it's always paid on each exact dueTime.
-
-        @param id Id of the registry
-
-        @return timestamp Timestamp of the final due time
-    */
-    function getFinalTime(bytes32 id) external view returns (uint256 timestamp);
-
-    /**
-        Similar to getFinalTime returns the expected payment remaining if paid always on the exact dueTime.
-
-        If the model has no interest discounts for early payments,
-            this method should return the same value as getClosingObligation.
-
-        @param id Id of the registry
-
-        @return amount Expected payment amount
-    */
-    function getEstimateObligation(bytes32 id) external view returns (uint256 amount);
-
-    // ///
-    // State interface
-    // ///
-
-    /**
-        Creates a new registry using the provided data and id, it should fail if the id already exists
-            or if calling validate(data) returns false or throws.
-
-        @dev This method should only be callable by an operator
-
-        @param id Id of the registry to create
-        @param data Data to construct the new registry
-
-        @return success True if the registry was created
-    */
-    function create(bytes32 id, bytes calldata data) external returns (bool success);
-
-    /**
-        If the registry is fully paid on the call and the amount parameter exceeds the required
-            payment amount, the method returns the real amount used on the payment.
-
-        The payment taken should always be the same as the requested unless the registry
-            is fully paid on the process.
-
-        @dev This method should only be callable by an operator
-
-        @param id If of the registry
-        @param amount Amount to pay
-
-        @return real Real amount paid
-    */
-    function addPaid(bytes32 id, uint256 amount) external returns (uint256 real);
-
-    /**
-        Adds a new amount to be paid on the debt model,
-            each model can handle the addition of more debt freely.
-
-        @dev This method should only be callable by an operator
-
-        @param id Id of the registry
-        @param amount Debt amount to add to the registry
-
-        @return added True if the debt was added
-    */
-    function addDebt(bytes32 id, uint256 amount) external returns (bool added);
-
-    // ///
-    // Utils
-    // ///
-
-    /**
-        Runs the internal clock of a registry, this is used to compute the last changes on the state.
-            It can make transactions cheaper by avoiding multiple calculations when calling views.
-
-        Not all models have internal clocks, a model without an internal clock should always return false.
-
-        Calls to this method should be possible from any address,
-            multiple calls to run shouldn't affect the internal calculations of the model.
-
-        @dev If the call had no effect the method would return False,
-            that is no sign of things going wrong, and the call shouldn't be wrapped on a require
-
-        @param id If of the registry
-
-        @return effect True if the run performed a change on the state
-    */
-    function run(bytes32 id) external returns (bool effect);
-}
-
-// File: contracts/core/diaspore/interfaces/RateOracle.sol
-
-pragma solidity ^0.5.12;
-
-
-
-/**
-    @dev Defines the interface of a standard Diaspore RCN Oracle,
-
-    The contract should also implement it's ERC165 interface: 0xa265d8e0
-
-    @notice Each oracle can only support one currency
-
-    @author Agustin Aguilar
-*/
-contract RateOracle is IERC165 {
-    uint256 public constant VERSION = 5;
-    bytes4 internal constant RATE_ORACLE_INTERFACE = 0xa265d8e0;
-
-    constructor() internal {}
-
-    /**
-        3 or 4 letters symbol of the currency, Ej: ETH
-    */
-    function symbol() external view returns (string memory);
-
-    /**
-        Descriptive name of the currency, Ej: Ethereum
-    */
-    function name() external view returns (string memory);
-
-    /**
-        The number of decimals of the currency represented by this Oracle,
-            it should be the most common number of decimal places
-    */
-    function decimals() external view returns (uint256);
-
-    /**
-        The base token on which the sample is returned
-            should be the RCN Token address.
-    */
-    function token() external view returns (address);
-
-    /**
-        The currency symbol encoded on a UTF-8 Hex
-    */
-    function currency() external view returns (bytes32);
-
-    /**
-        The name of the Individual or Company in charge of this Oracle
-    */
-    function maintainer() external view returns (string memory);
-
-    /**
-        Returns the url where the oracle exposes a valid "oracleData" if needed
-    */
-    function url() external view returns (string memory);
-
-    /**
-        Returns a sample on how many token() are equals to how many currency()
-    */
-    function readSample(bytes calldata _data) external returns (uint256 _tokens, uint256 _equivalent);
-}
-
-// File: contracts/utils/IsContract.sol
-
-pragma solidity ^0.5.12;
+import '../utils/SafeMath.sol';
+import '../utils/Ownable.sol';
 
 
 library IsContract {
@@ -430,115 +16,12 @@ library IsContract {
     }
 }
 
-// File: contracts/utils/SafeMath.sol
-
-pragma solidity ^0.5.12;
-
-
-library SafeMath {
-    using SafeMath for uint256;
-
-    function add(uint256 x, uint256 y) internal pure returns (uint256) {
-        uint256 z = x + y;
-        require(z >= x, "Add overflow");
-        return z;
-    }
-
-    function sub(uint256 x, uint256 y) internal pure returns (uint256) {
-        require(x >= y, "Sub overflow");
-        return x - y;
-    }
-
-    function mult(uint256 x, uint256 y) internal pure returns (uint256) {
-        if (x == 0) {
-            return 0;
-        }
-
-        uint256 z = x * y;
-        require(z/x == y, "Mult overflow");
-        return z;
-    }
-
-    function div(uint256 x, uint256 y) internal pure returns (uint256) {
-        require(y != 0, "Div by zero");
-        return x / y;
-    }
-
-    function multdiv(uint256 x, uint256 y, uint256 z) internal pure returns (uint256) {
-        require(z != 0, "div by zero");
-        return x.mult(y) / z;
-    }
-}
-
-// File: contracts/commons/ERC165.sol
-
-pragma solidity ^0.5.12;
-
-
-
-/**
- * @title ERC165
- * @author Matt Condon (@shrugs)
- * @dev Implements ERC165 using a lookup table.
- */
-contract ERC165 is IERC165 {
-    bytes4 private constant _InterfaceId_ERC165 = 0x01ffc9a7;
-    /**
-    * 0x01ffc9a7 ===
-    *   bytes4(keccak256('supportsInterface(bytes4)'))
-    */
-
-    /**
-    * @dev a mapping of interface id to whether or not it's supported
-    */
-    mapping(bytes4 => bool) private _supportedInterfaces;
-
-    /**
-    * @dev A contract implementing SupportsInterfaceWithLookup
-    * implement ERC165 itself
-    */
-    constructor()
-        internal
-    {
-        _registerInterface(_InterfaceId_ERC165);
-    }
-
-    /**
-    * @dev implement supportsInterface(bytes4) using a lookup table
-    */
-    function supportsInterface(bytes4 interfaceId)
-        external
-        view
-        returns (bool)
-    {
-        return _supportedInterfaces[interfaceId];
-    }
-
-    /**
-    * @dev internal method for registering an interface
-    */
-    function _registerInterface(bytes4 interfaceId)
-        internal
-    {
-        require(interfaceId != 0xffffffff, "Can't register 0xffffffff");
-        _supportedInterfaces[interfaceId] = true;
-    }
-}
-
-// File: contracts/commons/ERC721Base.sol
-
-pragma solidity ^0.5.12;
-
-
-
-
-
 interface URIProvider {
     function tokenURI(uint256 _tokenId) external view returns (string memory);
 }
 
 
-contract ERC721Base is ERC165 {
+contract ERC721Base {
     using SafeMath for uint256;
     using IsContract for address;
 
@@ -569,19 +52,7 @@ contract ERC721Base is ERC165 {
     ) public {
         _name = name;
         _symbol = symbol;
-
-        _registerInterface(ERC_721_INTERFACE);
-        _registerInterface(ERC_721_METADATA_INTERFACE);
-        _registerInterface(ERC_721_ENUMERATION_INTERFACE);
     }
-
-    // ///
-    // ERC721 Metadata
-    // ///
-
-    /// ERC-721 Non-Fungible Token Standard, optional metadata extension
-    /// See https://github.com/ethereum/EIPs/blob/master/EIPS/eip-721.md
-    /// Note: the ERC-165 identifier for this interface is 0x5b5e139f.
 
     event SetURIProvider(address _uriProvider);
 
@@ -833,7 +304,7 @@ contract ERC721Base is ERC165 {
 
         // Resize the array
         _assetsOf[_from][lastAssetIndex] = 0;
-        _assetsOf[_from].length--;
+        _assetsOf[_from].pop();
 
         // Change owner
         _holderOf[_assetId] = _to;
@@ -1000,17 +471,6 @@ contract ERC721Base is ERC165 {
         emit Transfer(holder, _to, _assetId);
     }
 
-    //
-    // Utilities
-    //
-
-    /**
-     * @dev Imitates a Solidity high-level call (i.e. a regular function call to a contract),
-     * relaxing the requirement on the return value
-     * @param _contract The contract that receives the ERC721
-     * @param _data The call data
-     * @return True if the call not reverts and the result of the call
-     */
     function _noThrowCall(
         address _contract,
         bytes memory _data
@@ -1022,73 +482,6 @@ contract ERC721Base is ERC165 {
             result = abi.decode(returnData, (bytes4));
     }
 }
-
-// File: contracts/interfaces/IERC173.sol
-
-pragma solidity ^0.5.12;
-
-
-/// @title ERC-173 Contract Ownership Standard
-/// @dev See https://github.com/ethereum/EIPs/blob/master/EIPS/eip-173.md
-///  Note: the ERC-165 identifier for this interface is 0x7f5828d0
-contract IERC173 {
-    /// @dev This emits when ownership of a contract changes.
-    event OwnershipTransferred(address indexed _previousOwner, address indexed _newOwner);
-
-    /// @notice Get the address of the owner
-    /// @return The address of the owner.
-    //// function owner() external view returns (address);
-
-    /// @notice Set the address of the new owner of the contract
-    /// @param _newOwner The address of the new owner of the contract
-    function transferOwnership(address _newOwner) external;
-}
-
-// File: contracts/commons/Ownable.sol
-
-pragma solidity ^0.5.12;
-
-
-
-contract Ownable is IERC173 {
-    address internal _owner;
-
-    modifier onlyOwner() {
-        require(msg.sender == _owner, "The owner should be the sender");
-        _;
-    }
-
-    constructor() public {
-        _owner = msg.sender;
-        emit OwnershipTransferred(address(0x0), msg.sender);
-    }
-
-    function owner() external view returns (address) {
-        return _owner;
-    }
-
-    /**
-        @dev Transfers the ownership of the contract.
-
-        @param _newOwner Address of the new owner
-    */
-    function transferOwnership(address _newOwner) external onlyOwner {
-        require(_newOwner != address(0), "0x0 Is not a valid owner");
-        emit OwnershipTransferred(_owner, _newOwner);
-        _owner = _newOwner;
-    }
-}
-
-// File: contracts/core/diaspore/DebtEngine.sol
-
-pragma solidity ^0.5.12;
-
-
-
-
-
-
-
 
 contract DebtEngine is ERC721Base, Ownable {
     using IsContract for address;
@@ -1173,7 +566,7 @@ contract DebtEngine is ERC721Base, Ownable {
     struct Debt {
         bool error;
         uint128 balance;
-        Model model;
+        IModel model;
         address creator;
         address oracle;
     }
@@ -1192,7 +585,7 @@ contract DebtEngine is ERC721Base, Ownable {
     }
 
     function create(
-        Model _model,
+        IModel _model,
         address _owner,
         address _oracle,
         bytes calldata _data
@@ -1226,7 +619,7 @@ contract DebtEngine is ERC721Base, Ownable {
     }
 
     function create2(
-        Model _model,
+        IModel _model,
         address _owner,
         address _oracle,
         uint256 _salt,
@@ -1263,7 +656,7 @@ contract DebtEngine is ERC721Base, Ownable {
     }
 
     function create3(
-        Model _model,
+        IModel _model,
         address _owner,
         address _oracle,
         uint256 _salt,
@@ -1355,7 +748,7 @@ contract DebtEngine is ERC721Base, Ownable {
         paid = _safePay(_id, debt.model, _amount);
         require(paid <= _amount, "Paid can't be more than requested");
 
-        RateOracle oracle = RateOracle(debt.oracle);
+        IRateOracle oracle = IRateOracle(debt.oracle);
         if (address(oracle) != address(0)) {
             // Convert
             (uint256 tokens, uint256 equivalent) = oracle.readSample(_oracleData);
@@ -1393,7 +786,7 @@ contract DebtEngine is ERC721Base, Ownable {
     ) external returns (uint256 paid, uint256 paidToken) {
         Debt storage debt = debts[id];
         // Read storage
-        RateOracle oracle = RateOracle(debt.oracle);
+        IRateOracle oracle = IRateOracle(debt.oracle);
 
         uint256 equivalent;
         uint256 tokens;
@@ -1454,7 +847,7 @@ contract DebtEngine is ERC721Base, Ownable {
         uint256 tokens;
         uint256 equivalent;
         if (_oracle != address(0)) {
-            (tokens, equivalent) = RateOracle(_oracle).readSample(_oracleData);
+            (tokens, equivalent) = IRateOracle(_oracle).readSample(_oracleData);
             emit ReadedOracleBatch(_oracle, count, tokens, equivalent);
         }
 
@@ -1489,7 +882,7 @@ contract DebtEngine is ERC721Base, Ownable {
         uint256 tokens;
         uint256 equivalent;
         if (_oracle != address(0)) {
-            (tokens, equivalent) = RateOracle(_oracle).readSample(_oracleData);
+            (tokens, equivalent) = IRateOracle(_oracle).readSample(_oracleData);
             emit ReadedOracleBatch(_oracle, count, tokens, equivalent);
         }
 
@@ -1565,10 +958,10 @@ contract DebtEngine is ERC721Base, Ownable {
 
     function _safePay(
         bytes32 _id,
-        Model _model,
+        IModel _model,
         uint256 _available
     ) internal returns (uint256) {
-        require(_model != Model(0), "Debt does not exist");
+        require(_model != IModel(0), "Debt does not exist");
 
         (bool success, bytes32 paid) = _safeGasCall(
             address(_model),
@@ -1608,49 +1001,31 @@ contract DebtEngine is ERC721Base, Ownable {
         }
     }
 
-    /**
-        Converts an amount in the rate currency to an amount in token
-
-        @param _amount Amount to convert in rate currency
-        @param _tokens How many tokens
-        @param _equivalent How much currency _tokens equivales
-
-        @return Amount in tokens
-    */
     function _toToken(
         uint256 _amount,
         uint256 _tokens,
         uint256 _equivalent
     ) internal pure returns (uint256 _result) {
         require(_tokens != 0 && _equivalent != 0, "Oracle provided invalid rate");
-        uint256 aux = _tokens.mult(_amount);
+        uint256 aux = _tokens.mul(_amount);
         _result = aux / _equivalent;
         if (aux % _equivalent > 0) {
             _result = _result.add(1);
         }
     }
 
-    /**
-        Converts an amount in token to the rate currency
-
-        @param _amount Amount to convert in token
-        @param _tokens How many tokens
-        @param _equivalent How much currency _tokens equivales
-
-        @return Amount in rate currency
-    */
     function _fromToken(
         uint256 _amount,
         uint256 _tokens,
         uint256 _equivalent
     ) internal pure returns (uint256) {
         require(_tokens != 0 && _equivalent != 0, "Oracle provided invalid rate");
-        return _amount.mult(_equivalent) / _tokens;
+        return _amount.mul(_equivalent) / _tokens;
     }
 
     function run(bytes32 _id) external returns (bool) {
         Debt storage debt = debts[_id];
-        require(debt.model != Model(0), "Debt does not exist");
+        require(debt.model != IModel(0), "Debt does not exist");
 
         (bool success, bytes32 result) = _safeGasCall(
             address(debt.model),
@@ -1770,13 +1145,6 @@ contract DebtEngine is ERC721Base, Ownable {
             result = abi.decode(returnData, (uint256));
     }
 
-    /**
-     * @dev Imitates a Solidity high-level call (i.e. a regular function call to a contract),
-     * relaxing the requirement on the return value
-     * @param _contract The contract that receives the call
-     * @param _data The call data
-     * @return True if the call not reverts and the result of the call
-     */
     function _safeGasCall(
         address _contract,
         bytes memory _data
@@ -1791,51 +1159,10 @@ contract DebtEngine is ERC721Base, Ownable {
     }
 }
 
-// File: contracts/core/diaspore/interfaces/LoanApprover.sol
 
-pragma solidity ^0.5.12;
-
-
-
-/**
-    A contract implementing LoanApprover is able to approve loan requests using callbacks,
-    to approve a loan the contract should respond the callbacks the result of
-    one designated value XOR keccak256("approve-loan-request")
-
-    keccak256("approve-loan-request"): 0xdfcb15a077f54a681c23131eacdfd6e12b5e099685b492d382c3fd8bfc1e9a2a
-
-    To receive calls on the callbacks, the contract should also implement the following ERC165 interfaces:
-
-    approveRequest: 0x76ba6009
-    settleApproveRequest: 0xcd40239e
-    LoanApprover: 0xbbfa4397
-*/
-contract LoanApprover is IERC165 {
-    /**
-        Request the approve of a loan created using requestLoan, if the borrower is this contract,
-        to approve the request the contract should return:
-
-        _futureDebt XOR 0xdfcb15a077f54a681c23131eacdfd6e12b5e099685b492d382c3fd8bfc1e9a2a
-
-        @param _futureDebt ID of the loan to approve
-
-        @return _futureDebt XOR keccak256("approve-loan-request"), if the approve is accepted
-    */
+interface LoanApprover {
     function approveRequest(bytes32 _futureDebt) external returns (bytes32);
 
-    /**
-        Request the approve of a loan being settled, the contract can be called as borrower or creator.
-        To approve the request the contract should return:
-
-        _id XOR 0xdfcb15a077f54a681c23131eacdfd6e12b5e099685b492d382c3fd8bfc1e9a2a
-
-        @param _requestData All the parameters of the loan request
-        @param _loanData Data to feed to the Model
-        @param _isBorrower True if this contract is the borrower, False if the contract is the creator
-        @param _id loanManager.requestSignature(_requestDatam _loanData)
-
-        @return _id XOR keccak256("approve-loan-request"), if the approve is accepted
-    */
     function settleApproveRequest(
         bytes calldata _requestData,
         bytes calldata _loanData,
@@ -1844,10 +1171,6 @@ contract LoanApprover is IERC165 {
     )
         external returns (bytes32);
 }
-
-// File: contracts/core/diaspore/interfaces/LoanCallback.sol
-
-pragma solidity ^0.5.12;
 
 
 interface LoanCallback {
@@ -1867,72 +1190,28 @@ interface LoanCallback {
     ) external view returns (bool);
 }
 
-// File: contracts/interfaces/Cosigner.sol
 
-pragma solidity ^0.5.12;
+interface Cosigner {
+    function url() external view returns (string memory);
 
-
-/**
-    @dev Defines the interface of a standard RCN cosigner.
-
-    The cosigner is an agent that gives an insurance to the lender in the event of a defaulted loan, the confitions
-    of the insurance and the cost of the given are defined by the cosigner.
-
-    The lender will decide what cosigner to use, if any; the address of the cosigner and the valid data provided by the
-    agent should be passed as params when the lender calls the "lend" method on the engine.
-
-    When the default conditions defined by the cosigner aligns with the status of the loan, the lender of the engine
-    should be able to call the "claim" method to receive the benefit; the cosigner can define aditional requirements to
-    call this method, like the transfer of the ownership of the loan.
-*/
-contract Cosigner {
-    uint256 public constant VERSION = 2;
-
-    /**
-        @return the url of the endpoint that exposes the insurance offers.
-    */
-    function url() public view returns (string memory);
-
-    /**
-        @dev Retrieves the cost of a given insurance, this amount should be exact.
-
-        @return the cost of the cosign, in RCN wei
-    */
     function cost(
         address engine,
         uint256 index,
-        bytes memory data,
-        bytes memory oracleData
+        bytes calldata data,
+        bytes calldata oracleData
     )
-        public view returns (uint256);
+        external view returns (uint256);
 
-    /**
-        @dev The engine calls this method for confirmation of the conditions, if the cosigner accepts the liability of
-        the insurance it must call the method "cosign" of the engine. If the cosigner does not call that method, or
-        does not return true to this method, the operation fails.
-
-        @return true if the cosigner accepts the liability
-    */
     function requestCosign(
         address engine,
         uint256 index,
-        bytes memory data,
-        bytes memory oracleData
+        bytes calldata data,
+        bytes calldata oracleData
     )
-        public returns (bool);
+        external returns (bool);
 
-    /**
-        @dev Claims the benefit of the insurance if the loan is defaulted, this method should be only calleable by the
-        current lender of the loan.
-
-        @return true if the claim was done correctly.
-    */
-    function claim(address engine, uint256 index, bytes memory oracleData) public returns (bool);
+    function claim(address engine, uint256 index, bytes calldata oracleData) external returns (bool);
 }
-
-// File: contracts/utils/ImplementsInterface.sol
-
-pragma solidity ^0.5.12;
 
 
 library ImplementsInterface {
@@ -1980,10 +1259,6 @@ library ImplementsInterface {
         }
     }
 }
-
-// File: contracts/utils/BytesUtils.sol
-
-pragma solidity ^0.5.12;
 
 
 contract BytesUtils {
@@ -2171,21 +1446,7 @@ contract BytesUtils {
         }
         require(_data.length >= o, "Reading bytes out of bounds");
     }
-
 }
-
-// File: contracts/core/diaspore/LoanManager.sol
-
-pragma solidity ^0.5.12;
-
-
-
-
-
-
-
-
-
 
 
 contract LoanManager is BytesUtils {
@@ -2245,16 +1506,13 @@ contract LoanManager is BytesUtils {
     function getCreator(uint256 _id) external view returns (address) { return requests[bytes32(_id)].creator; }
     function getOracle(uint256 _id) external view returns (address) { return requests[bytes32(_id)].oracle; }
     function getCosigner(uint256 _id) external view returns (address) { return requests[bytes32(_id)].cosigner; }
-    function getCurrency(uint256 _id) external view returns (bytes32) {
-        address oracle = requests[bytes32(_id)].oracle;
-        return oracle == address(0) ? bytes32(0x0) : RateOracle(oracle).currency();
-    }
+
     function getAmount(uint256 _id) external view returns (uint256) { return requests[bytes32(_id)].amount; }
     function getExpirationRequest(uint256 _id) external view returns (uint256) { return requests[bytes32(_id)].expiration; }
     function getApproved(uint256 _id) external view returns (bool) { return requests[bytes32(_id)].approved; }
     function getModel(uint256 _id) external view returns (address) { return requests[bytes32(_id)].model; }
-    function getDueTime(uint256 _id) external view returns (uint256) { return Model(requests[bytes32(_id)].model).getDueTime(bytes32(_id)); }
-    function getClosingObligation(uint256 _id) external view returns (uint256) { return Model(requests[bytes32(_id)].model).getClosingObligation(bytes32(_id)); }
+    function getDueTime(uint256 _id) external view returns (uint256) { return IModel(requests[bytes32(_id)].model).getDueTime(bytes32(_id)); }
+    function getClosingObligation(uint256 _id) external view returns (uint256) { return IModel(requests[bytes32(_id)].model).getClosingObligation(bytes32(_id)); }
     function getLoanData(uint256 _id) external view returns (bytes memory) { return requests[bytes32(_id)].loanData; }
     function getStatus(uint256 _id) external view returns (uint256) {
         Request storage request = requests[bytes32(_id)];
@@ -2269,16 +1527,13 @@ contract LoanManager is BytesUtils {
     function getCreator(bytes32 _id) external view returns (address) { return requests[_id].creator; }
     function getOracle(bytes32 _id) external view returns (address) { return requests[_id].oracle; }
     function getCosigner(bytes32 _id) external view returns (address) { return requests[_id].cosigner; }
-    function getCurrency(bytes32 _id) external view returns (bytes32) {
-        address oracle = requests[_id].oracle;
-        return oracle == address(0) ? bytes32(0x0) : RateOracle(oracle).currency();
-    }
+
     function getAmount(bytes32 _id) external view returns (uint256) { return requests[_id].amount; }
     function getExpirationRequest(bytes32 _id) external view returns (uint256) { return requests[_id].expiration; }
     function getApproved(bytes32 _id) external view returns (bool) { return requests[_id].approved; }
     function getModel(bytes32 _id) external view returns (address) { return requests[_id].model; }
-    function getDueTime(bytes32 _id) external view returns (uint256) { return Model(requests[_id].model).getDueTime(bytes32(_id)); }
-    function getClosingObligation(bytes32 _id) external view returns (uint256) { return Model(requests[_id].model).getClosingObligation(bytes32(_id)); }
+    function getDueTime(bytes32 _id) external view returns (uint256) { return IModel(requests[_id].model).getDueTime(bytes32(_id)); }
+    function getClosingObligation(bytes32 _id) external view returns (uint256) { return IModel(requests[_id].model).getClosingObligation(bytes32(_id)); }
     function getLoanData(bytes32 _id) external view returns (bytes memory) { return requests[_id].loanData; }
     function getStatus(bytes32 _id) external view returns (uint256) {
         Request storage request = requests[_id];
@@ -2384,7 +1639,7 @@ contract LoanManager is BytesUtils {
         bytes calldata _loanData
     ) external returns (bytes32 id) {
         require(_borrower != address(0), "The request should have a borrower");
-        require(Model(_model).validate(_loanData), "The loan data is not valid");
+        require(IModel(_model).validate(_loanData), "The loan data is not valid");
 
         id = calcId(
             _amount,
@@ -2557,7 +1812,7 @@ contract LoanManager is BytesUtils {
         // Generate the debt
         require(
             debtEngine.create2(
-                Model(request.model),
+                IModel(request.model),
                 msg.sender,
                 request.oracle,
                 _internalSalt(request),
@@ -2860,7 +2115,7 @@ contract LoanManager is BytesUtils {
         uint256 _innerSalt
     ) internal returns (bytes32) {
         return debtEngine.create2(
-            Model(address(uint256(read(_requestData, O_MODEL, L_MODEL)))),
+            IModel(address(uint256(read(_requestData, O_MODEL, L_MODEL)))),
             msg.sender,
             address(uint256(read(_requestData, O_ORACLE, L_ORACLE))),
             _innerSalt,
@@ -2975,20 +2230,13 @@ contract LoanManager is BytesUtils {
         bytes memory _oracleData
     ) internal returns (uint256) {
         if (_oracle == address(0)) return _amount;
-        (uint256 tokens, uint256 equivalent) = RateOracle(_oracle).readSample(_oracleData);
+        (uint256 tokens, uint256 equivalent) = IRateOracle(_oracle).readSample(_oracleData);
 
         emit ReadedOracle(_oracle, tokens, equivalent);
 
-        return tokens.mult(_amount) / equivalent;
+        return tokens.mul(_amount) / equivalent;
     }
 
-    /**
-     * @dev Imitates a Solidity high-level call (i.e. a regular function call to a contract),
-     * relaxing the requirement on the return value
-     * @param _contract The borrower contract that receives the approveRequest(bytes32) call
-     * @param _data The call data
-     * @return True if the call not reverts and the result of the call
-     */
     function _safeCall(
         address _contract,
         bytes memory _data
@@ -3000,5 +2248,3 @@ contract LoanManager is BytesUtils {
             result = abi.decode(returnData, (bytes32));
     }
 }
-
-contract DiasporeFlat {}

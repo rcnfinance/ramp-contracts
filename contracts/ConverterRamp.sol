@@ -1,24 +1,24 @@
-pragma solidity 0.5.12;
+pragma solidity ^0.6.6;
 
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "./interfaces/Cosigner.sol";
-import "./interfaces/diaspore/DebtEngine.sol";
-import "./interfaces/diaspore/LoanManager.sol";
-import "./interfaces/TokenConverter.sol";
-import "./interfaces/RateOracle.sol";
+import "./interfaces/IERC20.sol";
+import "./utils/SafeMath.sol";
+import "./utils/Ownable.sol";
+import "./interfaces/rcn/ICosigner.sol";
+import "./interfaces/rcn/IDebtEngine.sol";
+import "./interfaces/rcn/ILoanManager.sol";
+import "./interfaces/ITokenConverter.sol";
+import "./interfaces/rcn/IRateOracle.sol";
 import "./utils/SafeERC20.sol";
 import "./utils/SafeTokenConverter.sol";
 import "./utils/Math.sol";
 
 
 /// @title  Converter Ramp
-/// @notice for conversion between different assets, use TokenConverter
+/// @notice for conversion between different assets, use ITokenConverter
 ///         contract as abstract layer for convert different assets.
 /// @dev All function calls are currently implemented without side effects
 contract ConverterRamp is Ownable {
-    using SafeTokenConverter for TokenConverter;
+    using SafeTokenConverter for ITokenConverter;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -29,25 +29,25 @@ contract ConverterRamp is Ownable {
     event Return(address _token, address _to, uint256 _amount);
     event ReadedOracle(address _oracle, uint256 _tokens, uint256 _equivalent);
 
-    DebtEngine public debtEngine;
-    LoanManager public loanManager;
+    IDebtEngine public debtEngine;
+    ILoanManager public loanManager;
     IERC20 public token;
 
-    constructor(LoanManager _loanManager) public {
+    constructor(ILoanManager _loanManager) public {
         loanManager = _loanManager;
         token = _loanManager.token();
         debtEngine = _loanManager.debtEngine();
     }
 
     function pay(
-        TokenConverter _converter,
+        ITokenConverter _converter,
         IERC20 _fromToken,
         uint256 _payAmount,
         uint256 _maxSpend,
         bytes32 _requestId,
         bytes calldata _oracleData
     ) external payable {
-        DebtEngine _debtEngine = debtEngine;
+        IDebtEngine _debtEngine = debtEngine;
 
         // Get amount required, in RCN, for payment
         uint256 amount = getRequiredRcnPay(
@@ -85,17 +85,17 @@ contract ConverterRamp is Ownable {
     }
 
     function lend(
-        TokenConverter _converter,
+        ITokenConverter _converter,
         IERC20 _fromToken,
         uint256 _maxSpend,
-        Cosigner _cosigner,
+        ICosigner _cosigner,
         uint256 _cosignerLimitCost,
         bytes32 _requestId,
         bytes memory _oracleData,
         bytes memory _cosignerData,
         bytes memory _callbackData
     ) public payable {
-        LoanManager _loanManager = loanManager;
+        ILoanManager _loanManager = loanManager;
 
         // Get required RCN for lending the loan
         uint256 amount = getRequiredRcnLend(
@@ -132,9 +132,9 @@ contract ConverterRamp is Ownable {
     }
 
     function getLendCost(
-        TokenConverter _converter,
+        ITokenConverter _converter,
         IERC20 _fromToken,
-        Cosigner _cosigner,
+        ICosigner _cosigner,
         bytes32 _requestId,
         bytes calldata _oracleData,
         bytes calldata _cosignerData
@@ -156,7 +156,7 @@ contract ConverterRamp is Ownable {
 
     /// @notice returns how much RCN is required for a given pay
     function getPayCost(
-        TokenConverter _converter,
+        ITokenConverter _converter,
         IERC20 _fromToken,
         bytes32 _requestId,
         uint256 _amount,
@@ -178,8 +178,8 @@ contract ConverterRamp is Ownable {
 
     /// @notice returns how much RCN is required for a given lend
     function getRequiredRcnLend(
-        LoanManager _loanManager,
-        Cosigner _lenderCosignerAddress,
+        ILoanManager _loanManager,
+        ICosigner _lenderCosignerAddress,
         bytes32 _requestId,
         bytes memory _oracleData,
         bytes memory _cosignerData
@@ -188,7 +188,7 @@ contract ConverterRamp is Ownable {
         uint256 amount = loanManager.getAmount(_requestId);
 
         // If loan has a cosigner, sum the cost
-        if (_lenderCosignerAddress != Cosigner(0)) {
+        if (_lenderCosignerAddress != ICosigner(0)) {
             amount = amount.add(
                 _lenderCosignerAddress.cost(
                     address(_loanManager),
@@ -207,12 +207,12 @@ contract ConverterRamp is Ownable {
 
     /// @notice returns how much RCN is required for a given pay
     function getRequiredRcnPay(
-        DebtEngine _debtEngine,
+        IDebtEngine _debtEngine,
         bytes32 _requestId,
         uint256 _amount,
         bytes memory _oracleData
     ) internal returns (uint256 _result) {
-        (,,Model model,, RateOracle oracle) = _debtEngine.debts(_requestId);
+        (,,IModel model,, IRateOracle oracle) = _debtEngine.debts(_requestId);
 
         // Load amount to pay
         uint256 amount = Math.min(
@@ -235,14 +235,14 @@ contract ConverterRamp is Ownable {
             return _amount;
         }
 
-        (uint256 tokens, uint256 equivalent) = RateOracle(_oracle).readSample(_oracleData);
+        (uint256 tokens, uint256 equivalent) = IRateOracle(_oracle).readSample(_oracleData);
 
         emit ReadedOracle(_oracle, tokens, equivalent);
         return tokens.mul(_amount).divCeil(equivalent);
     }
 
     function getPriceConvertTo(
-        TokenConverter _converter,
+        ITokenConverter _converter,
         IERC20 _fromToken,
         uint256 _amount
     ) external view returns (uint256) {
@@ -254,7 +254,7 @@ contract ConverterRamp is Ownable {
     }
 
     function _convertAndReturn(
-        TokenConverter _converter,
+        ITokenConverter _converter,
         IERC20 _fromToken,
         IERC20 _toToken,
         uint256 _amount
@@ -270,7 +270,7 @@ contract ConverterRamp is Ownable {
     }
 
     function _pullConvertAndReturnExtra(
-        TokenConverter _converter,
+        ITokenConverter _converter,
         IERC20 _fromToken,
         IERC20 _toToken,
         uint256 _amount,
@@ -333,7 +333,7 @@ contract ConverterRamp is Ownable {
         _token.transfer(_to, _amount);
     }
 
-    function() external payable {
+    receive() external payable {
         // solhint-disable-next-line
         require(tx.origin != msg.sender, "ramp: send eth rejected");
     }

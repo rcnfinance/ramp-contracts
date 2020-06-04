@@ -1,5 +1,5 @@
 /* solium-disable */
-pragma solidity ^0.5.12;
+pragma solidity ^0.6.6;
 
 library SafeMath {
     using SafeMath for uint256;
@@ -127,7 +127,7 @@ contract TestToken is StandardToken {
         emit CreatedToken(address(this));
     }
 
-    function () external payable {
+    receive() external payable {
         buyTokens(msg.sender);
     }
 

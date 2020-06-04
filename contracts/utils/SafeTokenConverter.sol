@@ -1,9 +1,9 @@
-pragma solidity 0.5.12;
+pragma solidity ^0.6.6;
 
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "../interfaces/TokenConverter.sol";
-import "../utils/SafeERC20.sol";
+import "../interfaces/IERC20.sol";
+import "./SafeMath.sol";
+import "../interfaces/ITokenConverter.sol";
+import "./SafeERC20.sol";
 
 
 library SafeTokenConverter {
@@ -12,7 +12,7 @@ library SafeTokenConverter {
     using SafeMath for uint256;
 
     function safeConvertFrom(
-        TokenConverter _converter,
+        ITokenConverter _converter,
         IERC20 _fromToken,
         IERC20 _toToken,
         uint256 _fromAmount,
@@ -46,7 +46,7 @@ library SafeTokenConverter {
     }
 
     function safeConvertTo(
-        TokenConverter _converter,
+        ITokenConverter _converter,
         IERC20 _fromToken,
         IERC20 _toToken,
         uint256 _toAmount,

@@ -1,13 +1,11 @@
-pragma solidity 0.5.12;
+pragma solidity ^0.6.6;
 
-import "./../interfaces/TokenConverter.sol";
-import "./../interfaces/uniswap/UniswapFactory.sol";
-import "./../interfaces/uniswap/UniswapExchange.sol";
-import "./../utils/SafeERC20.sol";
-import "./../utils/SafeExchange.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../interfaces/ITokenConverter.sol";
+import "../interfaces/uniswap/IUniswapFactory.sol";
+import "../interfaces/uniswap/IUniswapExchange.sol";
+import "../utils/SafeERC20.sol";
+import "../interfaces/IERC20.sol";
+import "../utils/Ownable.sol";
 
 
 /// @notice proxy between ConverterRamp and Uniswap
@@ -15,9 +13,7 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 ///         and makes approve calls to allow the recipient to transfer those
 ///         tokens from the contract.
 /// @author Joaquin Pablo Gonzalez (jpgonzalezra@gmail.com) & Agustin Aguilar (agusxrun@gmail.com)
-contract UniswapConverter is TokenConverter, Ownable {
-    using SafeMath for uint256;
-    using SafeExchange for UniswapExchange;
+contract UniswapConverter is ITokenConverter, Ownable {
     using SafeERC20 for IERC20;
 
     /// @notice address to identify operations with ETH
@@ -25,10 +21,10 @@ contract UniswapConverter is TokenConverter, Ownable {
 
     /// @notice registry of ERC20 tokens that have been added to the system
     ///         and the exchange to which they are associated.
-    UniswapFactory public factory;
+    IUniswapFactory public factory;
 
     constructor (address _uniswapFactory) public {
-        factory = UniswapFactory(_uniswapFactory);
+        factory = IUniswapFactory(_uniswapFactory);
     }
 
     function convertFrom(
@@ -36,10 +32,10 @@ contract UniswapConverter is TokenConverter, Ownable {
         IERC20 _toToken,
         uint256 _fromAmount,
         uint256 _minReceive
-    ) external payable returns (uint256 _received) {
+    ) override external payable returns (uint256 _received) {
         _pull(_fromToken, _fromAmount);
 
-        UniswapFactory _factory = factory;
+        IUniswapFactory _factory = factory;
 
         if (_fromToken == ETH_TOKEN_ADDRESS) {
             // Convert ETH to TOKEN
@@ -53,7 +49,7 @@ contract UniswapConverter is TokenConverter, Ownable {
             );
         } else if (_toToken == ETH_TOKEN_ADDRESS) {
             // Load Uniswap exchange
-            UniswapExchange exchange = _factory.getExchange(_fromToken);
+            IUniswapExchange exchange = _factory.getExchange(_fromToken);
             // Convert TOKEN to ETH
             // and send directly to msg.sender
             _approveOnlyOnce(_fromToken, address(exchange), _fromAmount);
@@ -65,7 +61,7 @@ contract UniswapConverter is TokenConverter, Ownable {
             );
         } else {
             // Load Uniswap exchange
-            UniswapExchange exchange = _factory.getExchange(_fromToken);
+            IUniswapExchange exchange = _factory.getExchange(_fromToken);
             // Convert TOKENA to ETH
             // and send it to this contract
             _approveOnlyOnce(_fromToken, address(exchange), _fromAmount);
@@ -87,10 +83,10 @@ contract UniswapConverter is TokenConverter, Ownable {
         IERC20 _toToken,
         uint256 _toAmount,
         uint256 _maxSpend
-    ) external payable returns (uint256 _spent) {
+    ) override external payable returns (uint256 _spent) {
         _pull(_fromToken, _maxSpend);
 
-        UniswapFactory _factory = factory;
+        IUniswapFactory _factory = factory;
 
         if (_fromToken == ETH_TOKEN_ADDRESS) {
             // Convert ETH to TOKEN
@@ -104,7 +100,7 @@ contract UniswapConverter is TokenConverter, Ownable {
             );
         } else if (_toToken == ETH_TOKEN_ADDRESS) {
             // Load Uniswap exchange
-            UniswapExchange exchange = _factory.getExchange(_fromToken);
+            IUniswapExchange exchange = _factory.getExchange(_fromToken);
             // Convert TOKEN to ETH
             // and send directly to msg.sender
             _approveOnlyOnce(_fromToken, address(exchange), _maxSpend);
@@ -116,7 +112,7 @@ contract UniswapConverter is TokenConverter, Ownable {
             );
         } else {
             // Load Uniswap exchange
-            UniswapExchange exchange = _factory.getExchange(_fromToken);
+            IUniswapExchange exchange = _factory.getExchange(_fromToken);
             // Convert TOKEN to ETH
             // and send directly to msg.sender
             _approveOnlyOnce(_fromToken, address(exchange), _maxSpend);
@@ -140,8 +136,8 @@ contract UniswapConverter is TokenConverter, Ownable {
         IERC20 _fromToken,
         IERC20 _toToken,
         uint256 _fromAmount
-    ) external view returns (uint256 _receive) {
-        UniswapFactory _factory = factory;
+    ) override external view returns (uint256 _receive) {
+        IUniswapFactory _factory = factory;
 
         if (_fromToken == ETH_TOKEN_ADDRESS) {
             // ETH -> TOKEN convertion
@@ -161,8 +157,8 @@ contract UniswapConverter is TokenConverter, Ownable {
         IERC20 _fromToken,
         IERC20 _toToken,
         uint256 _toAmount
-    ) external view returns (uint256 _spend) {
-        UniswapFactory _factory = factory;
+    ) override external view returns (uint256 _spend) {
+        IUniswapFactory _factory = factory;
 
         if (_fromToken == ETH_TOKEN_ADDRESS) {
             // ETH -> TOKEN convertion
@@ -225,7 +221,7 @@ contract UniswapConverter is TokenConverter, Ownable {
         _token.transfer(_to, _amount);
     }
 
-    function() external payable {
+    receive() external payable {
         // solhint-disable-next-line
         require(tx.origin != msg.sender, "uniswap-converter: send eth rejected");
     }
