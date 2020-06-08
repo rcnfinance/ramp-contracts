@@ -12,6 +12,10 @@ module.exports.bn = (number) => {
   return web3.utils.toBN(number);
 };
 
+module.exports.toETH = (amount) => {
+  return this.bn(web3.utils.toWei(amount.toString()));
+};
+
 module.exports.toBytes32 = (source) => {
   source = web3.utils.toHex(source);
   const rl = 64;
