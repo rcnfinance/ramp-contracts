@@ -30,11 +30,9 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
         uint256 _fromAmount,
         uint256 _minReceive
     ) override external payable returns (uint256 received) {
-        address[] memory path = new address[](2);
-        path[0] = address(_fromToken);
-        path[1] = address(_toToken);
+        address[] memory path = handlePath(_fromToken, _toToken);
 
-        uint[] memory amounts = new uint[](2);
+        uint[] memory amounts;
 
         if (_fromToken == ETH_TOKEN_ADDRESS) {
             // Convert ETH to TOKEN
@@ -87,9 +85,7 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
         uint256 _toAmount,
         uint256 _maxSpend
     ) override external payable returns (uint256 spent) {
-        address[] memory path = new address[](2);
-        path[0] = address(_fromToken);
-        path[1] = address(_toToken);
+        address[] memory path = handlePath(_fromToken, _toToken);
 
         uint256[] memory amounts;
 
@@ -143,22 +139,7 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
         IERC20 _toToken,
         uint256 _fromAmount
     ) override external view returns (uint256 toAmount) {
-        address[] memory path = new address[](2);
-
-        if (_fromToken == ETH_TOKEN_ADDRESS) {
-            // From ETH
-            path[0] = router.WETH();
-            path[1] = address(_toToken);
-        } else {
-            if (_toToken == ETH_TOKEN_ADDRESS) {
-                // To ETH
-                path[0] = address(_fromToken);
-                path[1] = router.WETH();
-            } else {
-                path[0] = address(_fromToken);
-                path[1] = address(_toToken);
-            }
-        }
+        address[] memory path = handlePath(_fromToken, _toToken);
 
         uint256[] memory amounts = router.getAmountsOut(_fromAmount, path);
         toAmount = amounts[1];
@@ -169,22 +150,7 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
         IERC20 _toToken,
         uint256 _toAmount
     ) override external view returns (uint256 fromAmount) {
-        address[] memory path = new address[](2);
-
-        if (_fromToken == ETH_TOKEN_ADDRESS) {
-            // From ETH
-            path[0] = router.WETH();
-            path[1] = address(_toToken);
-        } else {
-            if (_toToken == ETH_TOKEN_ADDRESS) {
-                // To ETH
-                path[0] = address(_fromToken);
-                path[1] = router.WETH();
-            } else {
-                path[0] = address(_fromToken);
-                path[1] = address(_toToken);
-            }
-        }
+        address[] memory path = handlePath(_fromToken, _toToken);
 
         uint256[] memory amounts = router.getAmountsIn(_toAmount, path);
         fromAmount = amounts[0];
@@ -203,6 +169,25 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
 
             _token.approve(_spender, uint(-1));
         }
+    }
+
+    function handlePath(IERC20 _fromToken, IERC20 _toToken) private view returns(address[] memory path) {
+        if (_fromToken == ETH_TOKEN_ADDRESS) {
+            // From ETH
+            path[0] = router.WETH();
+            path[1] = address(_toToken);
+        } else {
+            if (_toToken == ETH_TOKEN_ADDRESS) {
+                // To ETH
+                path[0] = address(_fromToken);
+                path[1] = router.WETH();
+            } else {
+                path[0] = address(_fromToken);
+                path[1] = address(router.WETH());
+                path[2] = address(_toToken);
+            }
+        }  
+        return path;
     }
 
     function emergencyWithdraw(
