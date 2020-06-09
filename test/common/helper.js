@@ -12,7 +12,7 @@ module.exports.bn = (number) => {
   return web3.utils.toBN(number);
 };
 
-module.exports.toETH = (amount) => {
+module.exports.toETH = (amount = 1) => {
   return this.bn(web3.utils.toWei(amount.toString()));
 };
 

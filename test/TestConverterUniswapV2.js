@@ -13,14 +13,7 @@ const TestRateOracle = artifacts.require('TestRateOracle');
 const {
   expect,
   bn,
-  random32bn,
   address0x,
-  bytes320x,
-  getBlockTime,
-  toEvents,
-  tryCatchRevert,
-  toBytes32,
-  increaseTime,
   toETH,
 } = require('./common/helper.js');
 const Snap = require('./common/balanceSnap.js');
@@ -169,7 +162,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
   });
 
   it('Shoud lend a loan using ETH, sending the exact amount', async () => {
-    const id = await requestLoan(bn(1000).mul(toETH(1)));
+    const id = await requestLoan(toETH(1000));
 
     const estimated = await converterRamp.getLendCost.call(
       uniswapV2Converter.address,
@@ -203,7 +196,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan using ETH, sending extra ETH amount', async () => {
-    const id = await requestLoan(bn(1001).mul(toETH(1)));
+    const id = await requestLoan(toETH(1001));
 
     const estimated = await converterRamp.getLendCost.call(
       uniswapV2Converter.address,
