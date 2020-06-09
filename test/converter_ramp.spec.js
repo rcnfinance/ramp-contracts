@@ -58,7 +58,7 @@ contract('ConverterRamp', function (accounts) {
     await uniswapFactory.createExchange(rcnToken.address);
     rcnUniswap = await UniswapExchange.at(await uniswapFactory.tokenToExchange(rcnToken.address));
     // Add liquidity 1 RCN => 0.00005 ETH
-    const amountEthRcnLiquidity = bn(40).mul(ETH); // 40 ETH
+    const amountEthRcnLiquidity = toETH(40); // 40 ETH
     const amountRcnLiquidity = amountEthRcnLiquidity.mul(bn(20000)); // 800000 RCN
     await rcnToken.setBalance(accounts[9], amountRcnLiquidity);
     await rcnToken.approve(rcnUniswap.address, amountRcnLiquidity, { from: accounts[9] });
@@ -75,7 +75,7 @@ contract('ConverterRamp', function (accounts) {
     await uniswapFactory.createExchange(destToken.address);
     destUniswap = await UniswapExchange.at(await uniswapFactory.tokenToExchange(destToken.address));
     // Add liquidity 1 ETH => 200 DEST
-    const amountDestLiquidity = bn(1000000).mul(ETH); // 1000000 DEST
+    const amountDestLiquidity = toETH(1000000); // 1000000 DEST
     const amountEthDestLiquidity = amountDestLiquidity.div(bn(200)); // 5000 ETH
     await destToken.setBalance(accounts[9], amountDestLiquidity);
     await destToken.approve(destUniswap.address, amountDestLiquidity, { from: accounts[9] });
