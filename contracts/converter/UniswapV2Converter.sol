@@ -76,6 +76,8 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
         }
 
         received = amounts[amounts.length - 1];
+
+        require(received >= _minReceive, "_received is not enought");
     }
 
     function convertTo(
@@ -130,6 +132,16 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
         }
 
         spent = amounts[0];
+
+        require(spent <= _maxSpend, "_maxSpend exceed");
+        if (spent < _maxSpend) {
+            uint256 surplus = _maxSpend - spent;
+            if (_fromToken == ETH_TOKEN_ADDRESS) {
+                msg.sender.transfer(surplus);
+            } else {
+                require(_fromToken.transfer(msg.sender, surplus), "error sending tokens");
+            }
+        }
     }
 
     function getPriceConvertFrom(
