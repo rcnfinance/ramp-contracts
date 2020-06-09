@@ -38,9 +38,9 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
             // and send directly to msg.sender
             require(msg.value == _fromAmount, "Sent eth is not enought");
 
-            amounts = router.swapExactETHForTokens.value(
-                _fromAmount
-            )(
+            amounts = router.swapExactETHForTokens{
+                value: _fromAmount
+            }(
                 _minReceive,
                 path,
                 msg.sender,
@@ -92,9 +92,9 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
             // and send directly to msg.sender
             require(msg.value == _maxSpend, "Sent eth is not enought");
 
-            amounts = router.swapETHForExactTokens.value(
-                _maxSpend
-            )(
+            amounts = router.swapETHForExactTokens{
+                value: _maxSpend
+            }(
                 _toAmount,
                 path,
                 msg.sender,

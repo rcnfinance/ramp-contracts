@@ -40,9 +40,9 @@ contract UniswapConverter is ITokenConverter, Ownable {
         if (_fromToken == ETH_TOKEN_ADDRESS) {
             // Convert ETH to TOKEN
             // and send directly to msg.sender
-            _received = _factory.getExchange(_toToken).ethToTokenTransferInput.value(
-                _fromAmount
-            )(
+            _received = _factory.getExchange(_toToken).ethToTokenTransferInput{
+                value: _fromAmount
+            }(
                 1,
                 uint(-1),
                 msg.sender
@@ -91,9 +91,9 @@ contract UniswapConverter is ITokenConverter, Ownable {
         if (_fromToken == ETH_TOKEN_ADDRESS) {
             // Convert ETH to TOKEN
             // and send directly to msg.sender
-            _spent = _factory.getExchange(_toToken).ethToTokenTransferOutput.value(
-                _maxSpend
-            )(
+            _spent = _factory.getExchange(_toToken).ethToTokenTransferOutput{
+                value: _maxSpend
+            }(
                 _toAmount,
                 uint(-1),
                 msg.sender

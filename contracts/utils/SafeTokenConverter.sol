@@ -21,9 +21,9 @@ library SafeTokenConverter {
         uint256 prevBalance = _selfBalance(_toToken);
 
         if (_fromToken == ETH_TOKEN_ADDRESS) {
-            _converter.convertFrom.value(
-                _fromAmount
-            )(
+            _converter.convertFrom{
+                value: _fromAmount
+            }(
                 _fromToken,
                 _toToken,
                 _fromAmount,
@@ -56,9 +56,9 @@ library SafeTokenConverter {
         uint256 prevToBalance = _selfBalance(_toToken);
 
         if (_fromToken == ETH_TOKEN_ADDRESS) {
-            _converter.convertTo.value(
-                _maxSpend
-            )(
+            _converter.convertTo{
+                value: _maxSpend
+            }(
                 _fromToken,
                 _toToken,
                 _toAmount,
