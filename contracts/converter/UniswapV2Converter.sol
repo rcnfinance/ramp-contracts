@@ -1,7 +1,7 @@
 pragma solidity ^0.6.6;
 
 import "./../interfaces/ITokenConverter.sol";
-import "./../interfaces/uniswapV2/IUniswapV2Router01.sol";
+import "./../interfaces/uniswapV2/IUniswapV2Router02.sol";
 import "./../utils/SafeERC20.sol";
 import "../interfaces/IERC20.sol";
 import "../utils/Ownable.sol";
@@ -18,9 +18,9 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
     /// @notice address to identify operations with ETH
     IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
-    IUniswapV2Router01 public router;
+    IUniswapV2Router02 public router;
 
-    constructor (IUniswapV2Router01 _router) public {
+    constructor (IUniswapV2Router02 _router) public {
         router = _router;
     }
 
