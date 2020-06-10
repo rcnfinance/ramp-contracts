@@ -200,7 +200,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
 
     const estimated = await converterRamp.getLendCost.call(
       uniswapV2Converter.address,
-      rcnToken.address,
+      ETH_ADDRESS,
       address0x,
       id,
       [],
