@@ -135,12 +135,7 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
 
         require(spent <= _maxSpend, "_maxSpend exceed");
         if (spent < _maxSpend) {
-            uint256 surplus = _maxSpend - spent;
-            if (_fromToken == ETH_TOKEN_ADDRESS) {
-                msg.sender.transfer(surplus);
-            } else {
-                require(_fromToken.transfer(msg.sender, surplus), "error sending tokens");
-            }
+            _transfer(_fromToken, msg.sender, _maxSpend - spent);
         }
     }
 
@@ -160,8 +155,9 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
         IERC20 _toToken,
         uint256 _toAmount
     ) override external view returns (uint256 fromAmount) {
-        address[] memory path = handlePath(_fromToken, _toToken);
+        address[] memory path = _handlePath(_fromToken, _toToken);
         uint256[] memory amounts = router.getAmountsIn(_toAmount, path);
+
         fromAmount = amounts[0];
     }
 
@@ -203,12 +199,24 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
         return path;
     }
 
+    function _transfer(
+        IERC20 _token,
+        address payable _to,
+        uint256 _amount
+    ) private {
+        if (_token == ETH_TOKEN_ADDRESS) {
+            _to.transfer(_amount);
+        } else {
+            require(_token.transfer(_to, _amount), "error sending tokens");
+        }
+    }
+
     function emergencyWithdraw(
         IERC20 _token,
-        address _to,
+        address payable _to,
         uint256 _amount
     ) external onlyOwner {
-        _token.transfer(_to, _amount);
+        _transfer(_token, _to, _amount);
     }
 
     receive() external payable {
