@@ -15,6 +15,8 @@ import "../utils/Ownable.sol";
 contract UniswapV2Converter is ITokenConverter, Ownable {
     using SafeERC20 for IERC20;
 
+    event SetRouter(IUniswapV2Router02 _router);
+
     /// @notice address to identify operations with ETH
     IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
@@ -22,6 +24,12 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
 
     constructor (IUniswapV2Router02 _router) public {
         router = _router;
+    }
+
+    function setRouter(IUniswapV2Router02 _router) external onlyOwner {
+        router = _router;
+
+        emit SetRouter(_router);
     }
 
     function convertFrom(
