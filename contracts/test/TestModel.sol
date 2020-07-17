@@ -1,99 +1,11 @@
-
-// File: contracts/interfaces/IERC165.sol
-
-pragma solidity ^0.5.12;
+pragma solidity ^0.6.6;
 
 
-interface IERC165 {
-    /// @notice Query if a contract implements an interface
-    /// @param interfaceID The interface identifier, as specified in ERC-165
-    /// @dev Interface identification is specified in ERC-165. This function
-    ///  uses less than 30,000 gas.
-    /// @return `true` if the contract implements `interfaceID` and
-    ///  `interfaceID` is not 0xffffffff, `false` otherwise
-    function supportsInterface(bytes4 interfaceID) external view returns (bool);
-}
-
-// File: contracts/commons/ERC165.sol
-
-pragma solidity ^0.5.12;
-
-
-
-/**
- * @title ERC165
- * @author Matt Condon (@shrugs)
- * @dev Implements ERC165 using a lookup table.
- */
-contract ERC165 is IERC165 {
-    bytes4 private constant _InterfaceId_ERC165 = 0x01ffc9a7;
-    /**
-    * 0x01ffc9a7 ===
-    *   bytes4(keccak256('supportsInterface(bytes4)'))
-    */
-
-    /**
-    * @dev a mapping of interface id to whether or not it's supported
-    */
-    mapping(bytes4 => bool) private _supportedInterfaces;
-
-    /**
-    * @dev A contract implementing SupportsInterfaceWithLookup
-    * implement ERC165 itself
-    */
-    constructor()
-        internal
-    {
-        _registerInterface(_InterfaceId_ERC165);
-    }
-
-    /**
-    * @dev implement supportsInterface(bytes4) using a lookup table
-    */
-    function supportsInterface(bytes4 interfaceId)
-        external
-        view
-        returns (bool)
-    {
-        return _supportedInterfaces[interfaceId];
-    }
-
-    /**
-    * @dev internal method for registering an interface
-    */
-    function _registerInterface(bytes4 interfaceId)
-        internal
-    {
-        require(interfaceId != 0xffffffff, "Can't register 0xffffffff");
-        _supportedInterfaces[interfaceId] = true;
-    }
-}
-
-// File: contracts/interfaces/IERC173.sol
-
-pragma solidity ^0.5.12;
-
-
-/// @title ERC-173 Contract Ownership Standard
-/// @dev See https://github.com/ethereum/EIPs/blob/master/EIPS/eip-173.md
-///  Note: the ERC-165 identifier for this interface is 0x7f5828d0
-contract IERC173 {
-    /// @dev This emits when ownership of a contract changes.
+interface IERC173 {
     event OwnershipTransferred(address indexed _previousOwner, address indexed _newOwner);
 
-    /// @notice Get the address of the owner
-    /// @return The address of the owner.
-    //// function owner() external view returns (address);
-
-    /// @notice Set the address of the new owner of the contract
-    /// @param _newOwner The address of the new owner of the contract
     function transferOwnership(address _newOwner) external;
 }
-
-// File: contracts/commons/Ownable.sol
-
-pragma solidity ^0.5.12;
-
 
 
 contract Ownable is IERC173 {
@@ -118,16 +30,12 @@ contract Ownable is IERC173 {
 
         @param _newOwner Address of the new owner
     */
-    function transferOwnership(address _newOwner) external onlyOwner {
+    function transferOwnership(address _newOwner) external override onlyOwner {
         require(_newOwner != address(0), "0x0 Is not a valid owner");
         emit OwnershipTransferred(_owner, _newOwner);
         _owner = _newOwner;
     }
 }
-
-// File: contracts/utils/BytesUtils.sol
-
-pragma solidity ^0.5.12;
 
 
 contract BytesUtils {
@@ -318,19 +226,8 @@ contract BytesUtils {
 
 }
 
-// File: contracts/test_utils/diaspore/TestModel.sol
 
-/* solium-disable */
-pragma solidity ^0.5.12;
-
-
-
-
-
-contract TestModel is ERC165, BytesUtils, Ownable {
-    // This things should be heredit by the model interface but i need a getStatus not view
-    bytes4 internal constant MODEL_INTERFACE = 0xaf498c35;
-
+contract TestModel is BytesUtils, Ownable {
     uint256 public constant STATUS_ONGOING = 1;
     uint256 public constant STATUS_PAID = 2;
     uint256 public constant STATUS_ERROR = 4;
@@ -363,12 +260,6 @@ contract TestModel is ERC165, BytesUtils, Ownable {
     event SetEngine(address _engine);
     event SetErrorFlag(bytes32 _id, uint256 _flag);
     event SetGlobalErrorFlag(uint256 _flag);
-
-    mapping(bytes4 => bool) private _supportedInterface;
-
-    constructor() public {
-        _registerInterface(MODEL_INTERFACE);
-    }
 
     function encodeData(
         uint128 _total,

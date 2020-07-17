@@ -1,6 +1,4 @@
-pragma solidity ^0.5.12;
-
-import "./../../common/ERC165.sol";
+pragma solidity ^0.6.6;
 
 
 /**
@@ -17,7 +15,7 @@ import "./../../common/ERC165.sol";
 
     @author Agustin Aguilar
 */
-contract Model is IERC165 {
+interface IModel {
     // ///
     // Events
     // ///
@@ -79,13 +77,6 @@ contract Model is IERC165 {
     */
     event AddedPaid(bytes32 indexed _id, uint256 _paid);
 
-    // Model interface selector
-    bytes4 internal constant MODEL_INTERFACE = 0xaf498c35;
-
-    uint256 public constant STATUS_ONGOING = 1;
-    uint256 public constant STATUS_PAID = 2;
-    uint256 public constant STATUS_ERROR = 4;
-
     // ///
     // Meta
     // ///
@@ -113,7 +104,7 @@ contract Model is IERC165 {
 
         @param operator Address of the target request operator
 
-        @return True if operator is able to modify the state of the model
+        @return canOperate True if operator is able to modify the state of the model
     */
     function isOperator(address operator) external view returns (bool canOperate);
 
@@ -125,7 +116,7 @@ contract Model is IERC165 {
 
         @param data Data to validate
 
-        @return True if the data can be used to create a new registry
+        @return isValid True if the data can be used to create a new registry
     */
     function validate(bytes calldata data) external view returns (bool isValid);
 
@@ -144,7 +135,7 @@ contract Model is IERC165 {
 
         @param id Id of the registry
 
-        @return The current status value
+        @return status The current status value
     */
     function getStatus(bytes32 id) external view returns (uint256 status);
 
@@ -155,7 +146,7 @@ contract Model is IERC165 {
 
         @param id Id of the registry
 
-        @return Total paid amount
+        @return paid Total paid amount
     */
     function getPaid(bytes32 id) external view returns (uint256 paid);
 

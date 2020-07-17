@@ -1,6 +1,6 @@
-pragma solidity ^0.5.12;
+pragma solidity ^0.6.6;
 
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "../interfaces/IERC20.sol";
 
 
 /**

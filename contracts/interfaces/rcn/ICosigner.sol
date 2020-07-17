@@ -1,13 +1,11 @@
-pragma solidity 0.5.12;
+pragma solidity ^0.6.6;
 
 
-interface Cosigner {
-
+interface ICosigner {
     function cost(
         address engine,
         uint256 index,
         bytes calldata data,
         bytes calldata oracleData
     ) external view returns (uint256);
-
 }

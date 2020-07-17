@@ -1,8 +1,8 @@
-
-const TestToken = artifacts.require('TestToken');
-const FakeUniswapFactory = artifacts.require('FakeUniswapFactory');
-const UniswapExchange = artifacts.require('IUniswapExchange');
-const UniswapConverter = artifacts.require('UniswapConverter');
+const TestToken = artifacts.require('TestToken.sol');
+const WETH9 = artifacts.require('WETH9');
+const UniswapV2Factory = artifacts.require('UniswapV2Factory');
+const UniswapV2Router = artifacts.require('UniswapV2Router01');
+const UniswapV2Converter = artifacts.require('UniswapV2Converter');
 const ConverterRamp = artifacts.require('ConverterRamp');
 
 const TestModel = artifacts.require('TestModel');
@@ -22,7 +22,9 @@ const ETH_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 const MAX_UINT256 = bn(2).pow(bn(256)).sub(bn(1));
 const MAX_UINT64 = bn(2).pow(bn(64)).sub(bn(1));
 
-contract('ConverterRamp', function (accounts) {
+contract('ConverterRamp with Uniswap V2', function (accounts) {
+  const owner = accounts[1];
+
   let rcnToken;
   let destToken;
   let debtEngine;
@@ -30,67 +32,45 @@ contract('ConverterRamp', function (accounts) {
   let model;
   let oracle;
   let converterRamp;
-  let uniswapFactory;
-  let rcnUniswap;
-  let destUniswap;
-  let uniswapConverter;
+  let uniswapV2Factory;
+  let uniswapV2Converter;
+  let router;
+  let weth;
 
-  before('Deploy RCN contracts', async () => {
-    // Deploy DEST and TEST tokens
-    rcnToken = await TestToken.new();
-    destToken = await TestToken.new();
+  async function addLiquidity (tokenA, tokenB, amountA, amountB) {
+    await tokenA.setBalance(owner, amountA);
+    await tokenA.approve(router.address, amountA, { from: owner });
+    await tokenB.setBalance(owner, amountB);
+    await tokenB.approve(router.address, amountB, { from: owner });
 
-    // Deploy RCN mini-ecosystem
-    debtEngine = await TestDebtEngine.new(rcnToken.address);
-    loanManager = await TestLoanManager.new(debtEngine.address);
-    model = await TestModel.new();
-    await model.setEngine(debtEngine.address);
-    oracle = await TestRateOracle.new();
-
-    // Deploy converter ramp
-    converterRamp = await ConverterRamp.new(loanManager.address);
-  });
-  beforeEach('Deploy contracts', async () => {
-    // Deploy Uniswap, cheate exchanges and
-    // fund pools
-    uniswapFactory = await FakeUniswapFactory.new();
-    // Create RCN (TEST) Uniswap
-    await uniswapFactory.createExchange(rcnToken.address);
-    rcnUniswap = await UniswapExchange.at(await uniswapFactory.tokenToExchange(rcnToken.address));
-    // Add liquidity 1 RCN => 0.00005 ETH
-    const amountEthRcnLiquidity = toETH(40); // 40 ETH
-    const amountRcnLiquidity = amountEthRcnLiquidity.mul(bn(20000)); // 800000 RCN
-    await rcnToken.setBalance(accounts[9], amountRcnLiquidity);
-    await rcnToken.approve(rcnUniswap.address, amountRcnLiquidity, { from: accounts[9] });
-    await rcnUniswap.addLiquidity(
-      0,
-      amountRcnLiquidity,
-      MAX_UINT256,
-      {
-        value: amountRcnLiquidity,
-        from: accounts[9],
-      }
+    await router.addLiquidity(
+      tokenA.address,
+      tokenB.address,
+      amountA,
+      amountB,
+      1,
+      1,
+      owner,
+      bn('999999999999999999999999999999'),
+      { from: owner }
     );
-    // Create DEST Uniswap
-    await uniswapFactory.createExchange(destToken.address);
-    destUniswap = await UniswapExchange.at(await uniswapFactory.tokenToExchange(destToken.address));
-    // Add liquidity 1 ETH => 200 DEST
-    const amountDestLiquidity = toETH(1000000); // 1000000 DEST
-    const amountEthDestLiquidity = amountDestLiquidity.div(bn(200)); // 5000 ETH
-    await destToken.setBalance(accounts[9], amountDestLiquidity);
-    await destToken.approve(destUniswap.address, amountDestLiquidity, { from: accounts[9] });
-    await destUniswap.addLiquidity(
-      0,
-      amountDestLiquidity,
-      MAX_UINT256,
-      {
-        value: amountEthDestLiquidity,
-        from: accounts[9],
-      }
+  }
+
+  async function addLiquidityETH (tokenA, amountETH, amountA) {
+    await tokenA.setBalance(owner, amountA);
+    await tokenA.approve(router.address, amountA, { from: owner });
+
+    await router.addLiquidityETH(
+      tokenA.address,
+      amountA,
+      1,
+      1,
+      owner,
+      '9999999999999999999999999999999',
+      { from: owner, value: amountETH }
     );
-    // Create UniswapConverter
-    uniswapConverter = await UniswapConverter.new(uniswapFactory.address);
-  });
+  }
+
   async function requestLoan (amount, oracle = address0x) {
     const expiration = MAX_UINT64;
     const data = await model.encodeData(amount, expiration);
@@ -152,11 +132,40 @@ contract('ConverterRamp', function (accounts) {
 
     return id;
   }
+
+  before('Deploy RCN contracts', async () => {
+    // Deploy DEST and TEST tokens
+    rcnToken = await TestToken.new();
+    destToken = await TestToken.new();
+
+    // Deploy RCN mini-ecosystem
+    debtEngine = await TestDebtEngine.new(rcnToken.address);
+    loanManager = await TestLoanManager.new(debtEngine.address);
+    model = await TestModel.new();
+    await model.setEngine(debtEngine.address);
+    oracle = await TestRateOracle.new();
+
+    // Deploy WETH
+    weth = await WETH9.new();
+
+    // Deploy Uniswap V2
+    uniswapV2Factory = await UniswapV2Factory.new(owner);
+    router = await UniswapV2Router.new(uniswapV2Factory.address, weth.address);
+    // Add liquidity
+    await addLiquidity(rcnToken, destToken, toETH(20000), toETH(1000000));
+    await addLiquidityETH(rcnToken, toETH(40), toETH(20000));
+    await addLiquidityETH(destToken, toETH(40), toETH(20000));
+
+    // Deploy converter ramp
+    uniswapV2Converter = await UniswapV2Converter.new(router.address);
+    converterRamp = await ConverterRamp.new(loanManager.address);
+  });
+
   it('Shoud lend a loan using ETH, sending the exact amount', async () => {
     const id = await requestLoan(toETH(1000));
 
     const estimated = await converterRamp.getLendCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       ETH_ADDRESS,
       address0x,
       id,
@@ -167,7 +176,7 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.etherSnap(accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       ETH_ADDRESS, // Used token
       estimated, // Max token spend
       address0x, // Cosigner address
@@ -179,7 +188,7 @@ contract('ConverterRamp', function (accounts) {
       {
         from: accounts[5],
         value: estimated,
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -190,7 +199,7 @@ contract('ConverterRamp', function (accounts) {
     const id = await requestLoan(toETH(1001));
 
     const estimated = await converterRamp.getLendCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       ETH_ADDRESS,
       address0x,
       id,
@@ -202,7 +211,7 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.etherSnap(accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       ETH_ADDRESS, // Used token
       maxSpend, // Max token spend
       address0x, // Cosigner address
@@ -214,7 +223,7 @@ contract('ConverterRamp', function (accounts) {
       {
         from: accounts[5],
         value: maxSpend,
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -225,7 +234,7 @@ contract('ConverterRamp', function (accounts) {
     const id = await requestLoan(toETH(1000));
 
     const estimated = await converterRamp.getLendCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       destToken.address,
       address0x,
       id,
@@ -238,7 +247,7 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       destToken.address, // Used token
       estimated, // Max token spend
       address0x, // Cosigner address
@@ -249,7 +258,7 @@ contract('ConverterRamp', function (accounts) {
       [], // Callback data
       {
         from: accounts[5],
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -260,7 +269,7 @@ contract('ConverterRamp', function (accounts) {
     const id = await requestLoan(toETH(1000));
 
     const estimated = await converterRamp.getLendCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       destToken.address,
       address0x,
       id,
@@ -275,7 +284,7 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       destToken.address, // Used token
       maxSpend, // Max token spend
       address0x, // Cosigner address
@@ -286,7 +295,7 @@ contract('ConverterRamp', function (accounts) {
       [], // Callback data
       {
         from: accounts[5],
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -300,7 +309,7 @@ contract('ConverterRamp', function (accounts) {
     const oracleData = await oracle.encodeRate(tokens, equivalent);
 
     const estimated = await converterRamp.getLendCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       ETH_ADDRESS,
       address0x,
       id,
@@ -311,7 +320,7 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.etherSnap(accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       ETH_ADDRESS, // Used token
       estimated, // Max token spend
       address0x, // Cosigner address
@@ -323,7 +332,7 @@ contract('ConverterRamp', function (accounts) {
       {
         from: accounts[5],
         value: estimated,
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -337,7 +346,7 @@ contract('ConverterRamp', function (accounts) {
     const oracleData = await oracle.encodeRate(tokens, equivalent);
 
     const estimated = await converterRamp.getLendCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       ETH_ADDRESS,
       address0x,
       id,
@@ -349,7 +358,7 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.etherSnap(accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       ETH_ADDRESS, // Used token
       maxSpend, // Max token spend
       address0x, // Cosigner address
@@ -361,7 +370,7 @@ contract('ConverterRamp', function (accounts) {
       {
         from: accounts[5],
         value: maxSpend,
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -375,7 +384,7 @@ contract('ConverterRamp', function (accounts) {
     const oracleData = await oracle.encodeRate(tokens, equivalent);
 
     const estimated = await converterRamp.getLendCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       destToken.address,
       address0x,
       id,
@@ -388,7 +397,7 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       destToken.address, // Used token
       estimated, // Max token spend
       address0x, // Cosigner address
@@ -399,7 +408,7 @@ contract('ConverterRamp', function (accounts) {
       [], // Callback data
       {
         from: accounts[5],
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -413,7 +422,7 @@ contract('ConverterRamp', function (accounts) {
     const oracleData = await oracle.encodeRate(tokens, equivalent);
 
     const estimated = await converterRamp.getLendCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       destToken.address,
       address0x,
       id,
@@ -428,7 +437,7 @@ contract('ConverterRamp', function (accounts) {
     const ethSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.lend(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       destToken.address, // Used token
       maxSpend, // Max token spend
       address0x, // Cosigner address
@@ -439,7 +448,7 @@ contract('ConverterRamp', function (accounts) {
       [], // Callback data
       {
         from: accounts[5],
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -450,7 +459,7 @@ contract('ConverterRamp', function (accounts) {
     const id = await lendLoan(await requestLoan(toETH(1000)));
     const payAmount = toETH(100);
     const estimated = await converterRamp.getPayCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       ETH_ADDRESS,
       id,
       payAmount,
@@ -461,7 +470,7 @@ contract('ConverterRamp', function (accounts) {
     const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       ETH_ADDRESS, // Used token
       payAmount, // Amount to pay
       estimated, // Max token spend
@@ -470,7 +479,7 @@ contract('ConverterRamp', function (accounts) {
       {
         from: accounts[5],
         value: estimated,
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -482,7 +491,7 @@ contract('ConverterRamp', function (accounts) {
     const id = await lendLoan(await requestLoan(toETH(1000)));
     const payAmount = toETH(100);
     const estimated = await converterRamp.getPayCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       ETH_ADDRESS,
       id,
       payAmount,
@@ -494,7 +503,7 @@ contract('ConverterRamp', function (accounts) {
     const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       ETH_ADDRESS, // Used token
       payAmount, // Amount to pay
       maxSpend, // Max token spend
@@ -503,7 +512,7 @@ contract('ConverterRamp', function (accounts) {
       {
         from: accounts[5],
         value: maxSpend,
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -516,7 +525,7 @@ contract('ConverterRamp', function (accounts) {
     const payAmount = toETH(2000);
     const realPayment = toETH(1000);
     const estimated = await converterRamp.getPayCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       ETH_ADDRESS,
       id,
       payAmount,
@@ -528,7 +537,7 @@ contract('ConverterRamp', function (accounts) {
     const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       ETH_ADDRESS, // Used token
       payAmount, // Amount to pay
       maxSpend, // Max token spend
@@ -537,7 +546,7 @@ contract('ConverterRamp', function (accounts) {
       {
         from: accounts[5],
         value: maxSpend,
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -549,7 +558,7 @@ contract('ConverterRamp', function (accounts) {
     const id = await lendLoan(await requestLoan(toETH(1000)));
     const payAmount = toETH(100);
     const estimated = await converterRamp.getPayCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       destToken.address,
       id,
       payAmount,
@@ -562,7 +571,7 @@ contract('ConverterRamp', function (accounts) {
     const balanceSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       destToken.address, // Used token
       payAmount, // Amount to pay
       estimated, // Max token spend
@@ -570,7 +579,7 @@ contract('ConverterRamp', function (accounts) {
       [], // Oracle data
       {
         from: accounts[5],
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -582,7 +591,7 @@ contract('ConverterRamp', function (accounts) {
     const id = await lendLoan(await requestLoan(toETH(1000)));
     const payAmount = toETH(100);
     const estimated = await converterRamp.getPayCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       destToken.address,
       id,
       payAmount,
@@ -596,7 +605,7 @@ contract('ConverterRamp', function (accounts) {
     const balanceSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       destToken.address, // Used token
       payAmount, // Amount to pay
       maxSpend, // Max token spend
@@ -604,7 +613,7 @@ contract('ConverterRamp', function (accounts) {
       [], // Oracle data
       {
         from: accounts[5],
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 
@@ -617,7 +626,7 @@ contract('ConverterRamp', function (accounts) {
     const payAmount = toETH(2000);
     const realPayment = toETH(1000);
     const estimated = await converterRamp.getPayCost.call(
-      uniswapConverter.address,
+      uniswapV2Converter.address,
       destToken.address,
       id,
       payAmount,
@@ -631,7 +640,7 @@ contract('ConverterRamp', function (accounts) {
     const balanceSnap = await Snap.balanceSnap(destToken, accounts[5]);
 
     await converterRamp.pay(
-      uniswapConverter.address, // Token converter
+      uniswapV2Converter.address, // Token converter
       destToken.address, // Used token
       payAmount, // Amount to pay
       maxSpend, // Max token spend
@@ -639,7 +648,7 @@ contract('ConverterRamp', function (accounts) {
       [], // Oracle data
       {
         from: accounts[5],
-        gasPrice: bn(0),
+        gasPrice: 0,
       }
     );
 

@@ -1,29 +1,29 @@
-pragma solidity ^0.5.12;
+pragma solidity ^0.6.6;
 
-import "./Model.sol";
-import "../RateOracle.sol";
+import "./IModel.sol";
+import "./IRateOracle.sol";
 
 
-interface DebtEngine {
+interface IDebtEngine {
     function debts(
         bytes32 _id
     ) external view returns(
         bool error,
         uint128 balance,
-        Model model,
+        IModel model,
         address creator,
-        RateOracle oracle
+        IRateOracle oracle
     );
 
     function create(
-        Model _model,
+        IModel _model,
         address _owner,
         address _oracle,
         bytes calldata _data
     ) external returns (bytes32 id);
 
     function create2(
-        Model _model,
+        IModel _model,
         address _owner,
         address _oracle,
         uint256 _salt,
@@ -31,7 +31,7 @@ interface DebtEngine {
     ) external returns (bytes32 id);
 
     function create3(
-        Model _model,
+        IModel _model,
         address _owner,
         address _oracle,
         uint256 _salt,
