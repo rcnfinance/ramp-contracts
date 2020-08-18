@@ -1,7 +1,7 @@
 const TestToken = artifacts.require('TestToken.sol');
 const WETH9 = artifacts.require('WETH9');
 const UniswapV2Factory = artifacts.require('UniswapV2Factory');
-const UniswapV2Router = artifacts.require('UniswapV2Router01');
+const UniswapV2Router = artifacts.require('UniswapV2Router02');
 const UniswapV2Converter = artifacts.require('UniswapV2Converter');
 const ConverterRamp = artifacts.require('ConverterRamp');
 
