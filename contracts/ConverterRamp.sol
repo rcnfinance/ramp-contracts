@@ -29,9 +29,9 @@ contract ConverterRamp is Ownable {
     event Return(address _token, address _to, uint256 _amount);
     event ReadedOracle(address _oracle, uint256 _tokens, uint256 _equivalent);
 
-    IDebtEngine public debtEngine;
-    ILoanManager public loanManager;
-    IERC20 public token;
+    IDebtEngine immutable public debtEngine;
+    ILoanManager immutable public loanManager;
+    IERC20 immutable public token;
 
     constructor(ILoanManager _loanManager) public {
         loanManager = _loanManager;

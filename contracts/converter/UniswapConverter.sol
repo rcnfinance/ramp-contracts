@@ -21,7 +21,7 @@ contract UniswapConverter is ITokenConverter, Ownable {
 
     /// @notice registry of ERC20 tokens that have been added to the system
     ///         and the exchange to which they are associated.
-    IUniswapFactory public factory;
+    IUniswapFactory immutable public factory;
 
     constructor (address _uniswapFactory) public {
         factory = IUniswapFactory(_uniswapFactory);
