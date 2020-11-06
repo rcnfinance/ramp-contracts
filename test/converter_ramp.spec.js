@@ -57,9 +57,9 @@ contract('ConverterRamp', function (accounts) {
     // Create RCN (TEST) Uniswap
     await uniswapFactory.createExchange(rcnToken.address);
     rcnUniswap = await UniswapExchange.at(await uniswapFactory.tokenToExchange(rcnToken.address));
-    // Add liquidity 1 RCN => 0.00005 ETH
-    const amountEthRcnLiquidity = toETH(40); // 40 ETH
-    const amountRcnLiquidity = amountEthRcnLiquidity.mul(bn(20000)); // 800000 RCN
+    // Add liquidity 1 RCN => 200 ETH
+    const amountEthRcnLiquidity = toETH(0.4); // 0.4 ETH
+    const amountRcnLiquidity = amountEthRcnLiquidity.mul(bn(200)); // 80 RCN
     await rcnToken.setBalance(accounts[9], amountRcnLiquidity);
     await rcnToken.approve(rcnUniswap.address, amountRcnLiquidity, { from: accounts[9] });
     await rcnUniswap.addLiquidity(
@@ -67,7 +67,7 @@ contract('ConverterRamp', function (accounts) {
       amountRcnLiquidity,
       MAX_UINT256,
       {
-        value: amountRcnLiquidity,
+        value: amountEthRcnLiquidity,
         from: accounts[9],
       }
     );
@@ -75,8 +75,8 @@ contract('ConverterRamp', function (accounts) {
     await uniswapFactory.createExchange(destToken.address);
     destUniswap = await UniswapExchange.at(await uniswapFactory.tokenToExchange(destToken.address));
     // Add liquidity 1 ETH => 200 DEST
-    const amountDestLiquidity = toETH(1000000); // 1000000 DEST
-    const amountEthDestLiquidity = amountDestLiquidity.div(bn(200)); // 5000 ETH
+    const amountDestLiquidity = toETH(0.1); // 0.1 DEST
+    const amountEthDestLiquidity = amountDestLiquidity.div(bn(200)); // 20 ETH
     await destToken.setBalance(accounts[9], amountDestLiquidity);
     await destToken.approve(destUniswap.address, amountDestLiquidity, { from: accounts[9] });
     await destUniswap.addLiquidity(
@@ -153,7 +153,7 @@ contract('ConverterRamp', function (accounts) {
     return id;
   }
   it('Shoud lend a loan using ETH, sending the exact amount', async () => {
-    const id = await requestLoan(toETH(1000));
+    const id = await requestLoan(toETH(0.01));
 
     const estimated = await converterRamp.getLendCost.call(
       uniswapConverter.address,
@@ -187,7 +187,7 @@ contract('ConverterRamp', function (accounts) {
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan using ETH, sending extra ETH amount', async () => {
-    const id = await requestLoan(toETH(1001));
+    const id = await requestLoan(toETH(0.01001));
 
     const estimated = await converterRamp.getLendCost.call(
       uniswapConverter.address,
@@ -222,7 +222,7 @@ contract('ConverterRamp', function (accounts) {
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan using another token, sending the exact amount', async () => {
-    const id = await requestLoan(toETH(1000));
+    const id = await requestLoan(toETH(0.01));
 
     const estimated = await converterRamp.getLendCost.call(
       uniswapConverter.address,
@@ -257,7 +257,7 @@ contract('ConverterRamp', function (accounts) {
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan using another token, sending extra amount', async () => {
-    const id = await requestLoan(toETH(1000));
+    const id = await requestLoan(toETH(0.01));
 
     const estimated = await converterRamp.getLendCost.call(
       uniswapConverter.address,
@@ -294,7 +294,7 @@ contract('ConverterRamp', function (accounts) {
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan with oracle using ETH, sending the exact amount', async () => {
-    const id = await requestLoan(toETH(1000), oracle.address);
+    const id = await requestLoan(toETH(0.01), oracle.address);
     const tokens = bn(10).pow(bn(36));
     const equivalent = tokens.div(bn(2));
     const oracleData = await oracle.encodeRate(tokens, equivalent);
@@ -331,7 +331,7 @@ contract('ConverterRamp', function (accounts) {
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan with oracle using ETH, sending extra ETH amount', async () => {
-    const id = await requestLoan(toETH(1001));
+    const id = await requestLoan(toETH(0.01001));
     const tokens = bn(10).pow(bn(18));
     const equivalent = tokens.div(bn(3));
     const oracleData = await oracle.encodeRate(tokens, equivalent);
@@ -369,7 +369,7 @@ contract('ConverterRamp', function (accounts) {
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan with oracle using another token, sending the exact amount', async () => {
-    const id = await requestLoan(toETH(1000));
+    const id = await requestLoan(toETH(0.01));
     const tokens = bn(10).pow(bn(40));
     const equivalent = tokens.div(bn(18));
     const oracleData = await oracle.encodeRate(tokens, equivalent);
@@ -407,7 +407,7 @@ contract('ConverterRamp', function (accounts) {
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan with oracle using another token, sending extra amount', async () => {
-    const id = await requestLoan(toETH(1000));
+    const id = await requestLoan(toETH(0.01));
     const tokens = bn(10).pow(bn(40));
     const equivalent = tokens.mul(bn(18));
     const oracleData = await oracle.encodeRate(tokens, equivalent);
@@ -447,8 +447,8 @@ contract('ConverterRamp', function (accounts) {
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud pay a loan using ETH, sending the exact amount', async () => {
-    const id = await lendLoan(await requestLoan(toETH(1000)));
-    const payAmount = toETH(100);
+    const id = await lendLoan(await requestLoan(toETH(0.01)));
+    const payAmount = toETH(0.001);
     const estimated = await converterRamp.getPayCost.call(
       uniswapConverter.address,
       ETH_ADDRESS,
@@ -479,8 +479,8 @@ contract('ConverterRamp', function (accounts) {
     await engineSnap.requireIncrease(payAmount);
   });
   it('Shoud pay a loan using ETH, sending sending extra amount', async () => {
-    const id = await lendLoan(await requestLoan(toETH(1000)));
-    const payAmount = toETH(100);
+    const id = await lendLoan(await requestLoan(toETH(0.01)));
+    const payAmount = toETH(0.001);
     const estimated = await converterRamp.getPayCost.call(
       uniswapConverter.address,
       ETH_ADDRESS,
@@ -512,9 +512,9 @@ contract('ConverterRamp', function (accounts) {
     await engineSnap.requireIncrease(payAmount);
   });
   it('Shoud pay the total amount of a loan using ETH, sending sending extra amount', async () => {
-    const id = await lendLoan(await requestLoan(toETH(1000)));
-    const payAmount = toETH(2000);
-    const realPayment = toETH(1000);
+    const id = await lendLoan(await requestLoan(toETH(0.01)));
+    const payAmount = toETH(0.02);
+    const realPayment = toETH(0.01);
     const estimated = await converterRamp.getPayCost.call(
       uniswapConverter.address,
       ETH_ADDRESS,
@@ -546,8 +546,8 @@ contract('ConverterRamp', function (accounts) {
     await engineSnap.requireIncrease(realPayment);
   });
   it('Shoud pay a loan using another token, sending the exact amount', async () => {
-    const id = await lendLoan(await requestLoan(toETH(1000)));
-    const payAmount = toETH(100);
+    const id = await lendLoan(await requestLoan(toETH(0.01)));
+    const payAmount = toETH(0.001);
     const estimated = await converterRamp.getPayCost.call(
       uniswapConverter.address,
       destToken.address,
@@ -579,8 +579,8 @@ contract('ConverterRamp', function (accounts) {
     await engineSnap.requireIncrease(payAmount);
   });
   it('Shoud pay a loan using another token, sending sending extra amount', async () => {
-    const id = await lendLoan(await requestLoan(toETH(1000)));
-    const payAmount = toETH(100);
+    const id = await lendLoan(await requestLoan(toETH(0.1)));
+    const payAmount = toETH(0.001);
     const estimated = await converterRamp.getPayCost.call(
       uniswapConverter.address,
       destToken.address,
@@ -613,9 +613,9 @@ contract('ConverterRamp', function (accounts) {
     await engineSnap.requireIncrease(payAmount);
   });
   it('Shoud pay the total amount of a loan using another token, sending sending extra amount', async () => {
-    const id = await lendLoan(await requestLoan(toETH(1000)));
-    const payAmount = toETH(2000);
-    const realPayment = toETH(1000);
+    const id = await lendLoan(await requestLoan(toETH(0.01)));
+    const payAmount = toETH(0.02);
+    const realPayment = toETH(0.01);
     const estimated = await converterRamp.getPayCost.call(
       uniswapConverter.address,
       destToken.address,
