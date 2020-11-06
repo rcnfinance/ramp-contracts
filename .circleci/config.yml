@@ -74,7 +74,7 @@ jobs:
             # Run truffle test
             - run:
                 name: Run truffle tests
-                command: node_modules/.bin/truffle test
+                command: npm run test
 
     # The coverage job
     coverage:
@@ -97,10 +97,7 @@ jobs:
             - run:
                 name: solidity-coverage
                 no_output_timeout: 30m
-                command:
-                    rm -rf node_modules &&
-                    npm install &&
-                    node_modules/.bin/truffle run coverage
+                command: npm run coverage
             # Upload results
             - run:
                 name: Upload coverage to coveralls
