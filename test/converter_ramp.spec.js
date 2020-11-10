@@ -295,7 +295,7 @@ contract('ConverterRamp', function (accounts) {
   });
   it('Shoud lend a loan with oracle using ETH, sending the exact amount', async () => {
     const id = await requestLoan(toETH(0.01), oracle.address);
-    const tokens = bn(10).pow(bn(36));
+    const tokens = bn(10).pow(bn(18));
     const equivalent = tokens.div(bn(2));
     const oracleData = await oracle.encodeRate(tokens, equivalent);
 
@@ -370,7 +370,7 @@ contract('ConverterRamp', function (accounts) {
   });
   it('Shoud lend a loan with oracle using another token, sending the exact amount', async () => {
     const id = await requestLoan(toETH(0.01));
-    const tokens = bn(10).pow(bn(40));
+    const tokens = bn(10).pow(bn(20));
     const equivalent = tokens.div(bn(18));
     const oracleData = await oracle.encodeRate(tokens, equivalent);
 
@@ -408,7 +408,7 @@ contract('ConverterRamp', function (accounts) {
   });
   it('Shoud lend a loan with oracle using another token, sending extra amount', async () => {
     const id = await requestLoan(toETH(0.01));
-    const tokens = bn(10).pow(bn(40));
+    const tokens = bn(10).pow(bn(20));
     const equivalent = tokens.mul(bn(18));
     const oracleData = await oracle.encodeRate(tokens, equivalent);
 
