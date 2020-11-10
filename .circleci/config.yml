@@ -97,7 +97,10 @@ jobs:
             - run:
                 name: solidity-coverage
                 no_output_timeout: 30m
-                command: npm run coverage
+                command:
+                    rm -rf node_modules &&
+                    npm install &&
+                    npm run coverage
             # Upload results
             - run:
                 name: Upload coverage to coveralls
