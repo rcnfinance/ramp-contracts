@@ -35,10 +35,6 @@
     "url": "https://github.com/ripio/ramps-diaspore"
   },
   "homepage": "https://ripiocredit.network",
-  "dependencies": {
-    "web3": "1.2.0",
-    "openzeppelin-solidity": "2.3.0"
-  },
   "devDependencies": {
     "bn-chai": "^1.0.1",
     "chai": "^4.2.0",
