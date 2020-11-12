@@ -1,5 +1,7 @@
 pragma solidity ^0.6.6;
 
+import "../../interfaces/IERC20.sol";
+
 /**
  *Submitted for verification at Etherscan.io on 2020-06-05
 */
@@ -18,6 +20,7 @@ interface IUniswapV2Factory {
     function setFeeTo(address) external;
     function setFeeToSetter(address) external;
 }
+
 
 interface IUniswapV2Pair {
     event Approval(address indexed owner, address indexed spender, uint value);
@@ -69,6 +72,7 @@ interface IUniswapV2Pair {
 
     function initialize(address, address) external;
 }
+
 
 interface IUniswapV2Router01 {
     function factory() external pure returns (address);
@@ -164,6 +168,7 @@ interface IUniswapV2Router01 {
     function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
 
+
 interface IUniswapV2Router02 is IUniswapV2Router01 {
     function removeLiquidityETHSupportingFeeOnTransferTokens(
         address token,
@@ -205,27 +210,13 @@ interface IUniswapV2Router02 is IUniswapV2Router01 {
     ) external;
 }
 
-interface IERC20 {
-    event Approval(address indexed owner, address indexed spender, uint value);
-    event Transfer(address indexed from, address indexed to, uint value);
-
-    function name() external view returns (string memory);
-    function symbol() external view returns (string memory);
-    function decimals() external view returns (uint8);
-    function totalSupply() external view returns (uint);
-    function balanceOf(address owner) external view returns (uint);
-    function allowance(address owner, address spender) external view returns (uint);
-
-    function approve(address spender, uint value) external returns (bool);
-    function transfer(address to, uint value) external returns (bool);
-    function transferFrom(address from, address to, uint value) external returns (bool);
-}
 
 interface IWETH {
     function deposit() external payable;
     function transfer(address to, uint value) external returns (bool);
     function withdraw(uint) external;
 }
+
 
 contract UniswapV2Router02 is IUniswapV2Router02 {
     using SafeMath for uint;
@@ -663,6 +654,7 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
     }
 }
 
+
 // a library for performing overflow-safe math, courtesy of DappHub (https://github.com/dapphub/ds-math)
 
 library SafeMath {
@@ -678,6 +670,7 @@ library SafeMath {
         require(y == 0 || (z = x * y) / y == x, 'ds-math-mul-overflow');
     }
 }
+
 
 library UniswapV2Library {
     using SafeMath for uint;
@@ -749,6 +742,7 @@ library UniswapV2Library {
         }
     }
 }
+
 
 // helper methods for interacting with ERC20 tokens and sending ETH that do not consistently return true/false
 library TransferHelper {

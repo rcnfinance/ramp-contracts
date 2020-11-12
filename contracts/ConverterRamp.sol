@@ -26,17 +26,22 @@ contract ConverterRamp is Ownable {
     /// @notice address to identify operations with ETH
     address public constant ETH_ADDRESS = address(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
-    event Return(address _token, address _to, uint256 _amount);
-    event ReadedOracle(address _oracle, uint256 _tokens, uint256 _equivalent);
+    event ReadedOracle(IRateOracle _oracle, uint256 _tokens, uint256 _equivalent);
 
     IDebtEngine immutable public debtEngine;
     ILoanManager immutable public loanManager;
-    IERC20 immutable public token;
+    IERC20 immutable public debtEngineToken;
 
     constructor(ILoanManager _loanManager) public {
         loanManager = _loanManager;
-        token = _loanManager.token();
-        debtEngine = _loanManager.debtEngine();
+        IERC20 _debtEngineToken = _loanManager.token();
+        debtEngineToken = _debtEngineToken;
+        IDebtEngine _debtEngine = _loanManager.debtEngine();
+        debtEngine = _debtEngine;
+
+        // Approve loanManager and debtEngine
+        require(_debtEngineToken.safeApprove(address(_loanManager), uint(-1)), "constructor: fail LoanManager safeApprove");
+        require(_debtEngineToken.safeApprove(address(_debtEngine), uint(-1)), "constructor: fail DebtEngine safeApprove");
     }
 
     function pay(
@@ -47,40 +52,34 @@ contract ConverterRamp is Ownable {
         bytes32 _requestId,
         bytes calldata _oracleData
     ) external payable {
-        IDebtEngine _debtEngine = debtEngine;
+        uint256 amount;
+        {
+            // Get amount required, in RCN, for payment
+            uint256 fee;
+            (amount, fee) = getRequiredRcnPay(_requestId, _payAmount, _oracleData);
 
-        // Get amount required, in RCN, for payment
-        uint256 amount = getRequiredRcnPay(
-            _debtEngine,
-            _requestId,
-            _payAmount,
-            _oracleData
-        );
-
-        // Pull funds from sender
-        IERC20 _token = token;
-        _pullConvertAndReturnExtra(
-            _converter,
-            _fromToken,
-            _token,
-            amount,
-            _maxSpend
-        );
-
-        // Pay the loan the debtEngine is trusted so we can approve it only once
-        _approveOnlyOnce(_token, address(_debtEngine), amount);
+            // Pull funds from sender
+            _pullConvertAndReturnExtra(
+                _converter,
+                _fromToken,
+                amount + fee,
+                _maxSpend
+            );
+        }
 
         // Execute the payment
-        (, uint256 paidToken) = _debtEngine.payToken(_requestId, amount, msg.sender, _oracleData);
+        (, uint256 paidToken, uint256 paidFee) = debtEngine.payToken(_requestId, amount, msg.sender, _oracleData);
 
         // Convert any extra RCN and send it back it should not be reachable
         if (paidToken < amount) {
-            _convertAndReturn(
-                _converter,
-                _token,
+            uint256 buyBack = _converter.safeConvertFrom(
                 _fromToken,
-                amount - paidToken
+                debtEngineToken,
+                amount - paidToken - paidFee,
+                1
             );
+
+            require(debtEngineToken.safeTransfer(msg.sender, buyBack), "error sending extra");
         }
     }
 
@@ -95,30 +94,22 @@ contract ConverterRamp is Ownable {
         bytes memory _cosignerData,
         bytes memory _callbackData
     ) public payable {
-        ILoanManager _loanManager = loanManager;
-
         // Get required RCN for lending the loan
         uint256 amount = getRequiredRcnLend(
-            _loanManager,
             _cosigner,
             _requestId,
             _oracleData,
             _cosignerData
         );
 
-        IERC20 _token = token;
         _pullConvertAndReturnExtra(
             _converter,
             _fromToken,
-            _token,
             amount,
             _maxSpend
         );
 
-        // Approve token to loan manager only once the loan manager is trusted
-        _approveOnlyOnce(_token, address(_loanManager), amount);
-
-        _loanManager.lend(
+        loanManager.lend(
             _requestId,
             _oracleData,
             address(_cosigner),
@@ -140,7 +131,6 @@ contract ConverterRamp is Ownable {
         bytes calldata _cosignerData
     ) external returns (uint256) {
         uint256 amountRcn = getRequiredRcnLend(
-            loanManager,
             _cosigner,
             _requestId,
             _oracleData,
@@ -149,36 +139,30 @@ contract ConverterRamp is Ownable {
 
         return _converter.getPriceConvertTo(
             _fromToken,
-            token,
+            debtEngineToken,
             amountRcn
         );
     }
 
     /// @notice returns how much RCN is required for a given pay
-    function getPayCost(
+    function getPayCostWithFee(
         ITokenConverter _converter,
         IERC20 _fromToken,
         bytes32 _requestId,
         uint256 _amount,
         bytes calldata _oracleData
     ) external returns (uint256) {
-        uint256 amountRcn = getRequiredRcnPay(
-            debtEngine,
-            _requestId,
-            _amount,
-            _oracleData
-        );
+        (uint256 amount, uint256 fee) = getRequiredRcnPay(_requestId, _amount, _oracleData);
 
         return _converter.getPriceConvertTo(
             _fromToken,
-            token,
-            amountRcn
+            debtEngineToken,
+            amount + fee
         );
     }
 
     /// @notice returns how much RCN is required for a given lend
     function getRequiredRcnLend(
-        ILoanManager _loanManager,
         ICosigner _lenderCosignerAddress,
         bytes32 _requestId,
         bytes memory _oracleData,
@@ -191,95 +175,65 @@ contract ConverterRamp is Ownable {
         if (_lenderCosignerAddress != ICosigner(0)) {
             amount = amount.add(
                 _lenderCosignerAddress.cost(
-                    address(_loanManager),
-                    uint256(_requestId),
+                    loanManager,
+                    _requestId,
                     _cosignerData,
                     _oracleData
                 )
             );
         }
 
-        // Load the  Oracle rate and convert required
-        address oracle = loanManager.getOracle(uint256(_requestId));
+        // Convert amount in currency to amount in tokens
+        IRateOracle oracle = loanManager.getOracle(_requestId);
+        if (oracle == IRateOracle(0)) {
+            return amount;
+        }
 
-        return getCurrencyToToken(oracle, amount, _oracleData);
+        (uint256 tokens, uint256 equivalent) = oracle.readSample(_oracleData);
+
+        emit ReadedOracle(oracle, tokens, equivalent);
+
+        return tokens.mult(amount).divCeil(equivalent);
     }
 
     /// @notice returns how much RCN is required for a given pay
     function getRequiredRcnPay(
-        IDebtEngine _debtEngine,
         bytes32 _requestId,
         uint256 _amount,
         bytes memory _oracleData
-    ) internal returns (uint256 _result) {
-        (,,IModel model,, IRateOracle oracle) = _debtEngine.debts(_requestId);
+    ) internal returns (uint256 amount, uint256 fee) {
+        (amount, fee) = loanManager.getClosingObligation(_requestId);
 
         // Load amount to pay
-        uint256 amount = Math.min(
-            model.getClosingObligation(_requestId),
-            _amount
-        );
-
-        // Read loan oracle
-        return getCurrencyToToken(address(oracle), amount, _oracleData);
-    }
-
-    /// @notice returns how much tokens for _amount currency
-    /// @dev tokens and equivalents get oracle data
-    function getCurrencyToToken(
-        address _oracle,
-        uint256 _amount,
-        bytes memory _oracleData
-    ) internal returns (uint256) {
-        if (_oracle == address(0)) {
-            return _amount;
+        if (_amount < amount) {
+            amount = _amount;
+            fee = debtEngine.toFee(_requestId, _amount);
         }
 
-        (uint256 tokens, uint256 equivalent) = IRateOracle(_oracle).readSample(_oracleData);
+        // Convert amount and fee in currency to amount and fee in tokens
+        IRateOracle oracle = loanManager.getOracle(_requestId);
+        if (oracle == IRateOracle(0)) {
+            return (amount, fee);
+        }
 
-        emit ReadedOracle(_oracle, tokens, equivalent);
-        return tokens.mul(_amount).divCeil(equivalent);
-    }
+        (uint256 tokens, uint256 equivalent) = oracle.readSample(_oracleData);
 
-    function getPriceConvertTo(
-        ITokenConverter _converter,
-        IERC20 _fromToken,
-        uint256 _amount
-    ) external view returns (uint256) {
-        return _converter.getPriceConvertTo(
-            _fromToken,
-            token,
-            _amount
-        );
-    }
+        emit ReadedOracle(oracle, tokens, equivalent);
 
-    function _convertAndReturn(
-        ITokenConverter _converter,
-        IERC20 _fromToken,
-        IERC20 _toToken,
-        uint256 _amount
-    ) private {
-        uint256 buyBack = _converter.safeConvertFrom(
-            _fromToken,
-            _toToken,
-            _amount,
-            1
-        );
-
-        require(_toToken.safeTransfer(msg.sender, buyBack), "error sending extra");
+        amount = tokens.mult(amount).divCeil(equivalent);
+        fee = tokens.mult(fee).divCeil(equivalent);
     }
 
     function _pullConvertAndReturnExtra(
         ITokenConverter _converter,
         IERC20 _fromToken,
-        IERC20 _toToken,
         uint256 _amount,
         uint256 _maxSpend
     ) private {
         // Pull limit amount from sender
         _pull(_fromToken, _maxSpend);
 
-        uint256 spent = _converter.safeConvertTo(_fromToken, _toToken, _amount, _maxSpend);
+        uint256 spent = _converter.safeConvertTo(_fromToken, debtEngineToken, _amount, _maxSpend);
 
         if (spent < _maxSpend) {
             _transfer(_fromToken, msg.sender, _maxSpend - spent);
@@ -307,21 +261,6 @@ contract ConverterRamp is Ownable {
             _to.transfer(_amount);
         } else {
             require(_token.safeTransfer(_to, _amount), "error sending tokens");
-        }
-    }
-
-    function _approveOnlyOnce(
-        IERC20 _token,
-        address _spender,
-        uint256 _amount
-    ) private {
-        uint256 allowance = _token.allowance(address(this), _spender);
-        if (allowance < _amount) {
-            if (allowance != 0) {
-                _token.clearApprove(_spender);
-            }
-
-            _token.approve(_spender, uint(-1));
         }
     }
 

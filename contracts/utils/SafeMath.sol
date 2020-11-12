@@ -15,7 +15,7 @@ library SafeMath {
         return x - y;
     }
 
-    function mul(uint256 x, uint256 y) internal pure returns (uint256) {
+    function mult(uint256 x, uint256 y) internal pure returns (uint256) {
         if (x == 0) {
             return 0;
         }
@@ -32,6 +32,6 @@ library SafeMath {
 
     function multdiv(uint256 x, uint256 y, uint256 z) internal pure returns (uint256) {
         require(z != 0, "div by zero");
-        return x.mul(y) / z;
+        return x.mult(y) / z;
     }
 }

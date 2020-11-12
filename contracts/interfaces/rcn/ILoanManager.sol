@@ -2,6 +2,7 @@ pragma solidity ^0.6.6;
 
 import "../IERC20.sol";
 import "./IDebtEngine.sol";
+import "./IRateOracle.sol";
 
 
 interface ILoanManager {
@@ -11,7 +12,8 @@ interface ILoanManager {
     function getCurrency(uint256 _id) external view returns (bytes32);
     function getAmount(uint256 _id) external view returns (uint256);
     function getAmount(bytes32 _id) external view returns (uint256);
-    function getOracle(uint256 _id) external view returns (address);
+    function getOracle(bytes32 _id) external view returns (IRateOracle);
+    function getClosingObligation(bytes32 _id) external view returns (uint256 amount, uint256 fee);
 
     function settleLend(
         bytes calldata _requestData,
@@ -32,5 +34,4 @@ interface ILoanManager {
         bytes calldata _cosignerData,
         bytes calldata _callbackData
     ) external returns (bool);
-
 }
