@@ -43,9 +43,9 @@ module.exports.toEvents = async (tx, ...events) => {
     [],
     events.map(
       event => logs.filter(
-        log => log.event === event
-      )
-    )
+        log => log.event === event,
+      ),
+    ),
   );
 
   if (eventObjs.length === 0 || eventObjs.some(x => x === undefined)) {
@@ -72,7 +72,7 @@ module.exports.tryCatchRevert = async (promise, message, headMsg = 'revert ') =>
   } catch (error) {
     assert(
       error.message.search(headMsg + message) >= 0 || process.env.SOLIDITY_COVERAGE,
-      'Expected a revert \'' + headMsg + message + '\', got \'' + error.message + '\' instead'
+      'Expected a revert \'' + headMsg + message + '\', got \'' + error.message + '\' instead',
     );
     return;
   }

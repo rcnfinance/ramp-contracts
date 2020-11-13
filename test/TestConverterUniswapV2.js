@@ -53,7 +53,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       1,
       owner,
       bn('999999999999999999999999999999'),
-      { from: owner }
+      { from: owner },
     );
   }
 
@@ -68,7 +68,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       1,
       owner,
       '9999999999999999999999999999999',
-      { from: owner, value: amountETH }
+      { from: owner, value: amountETH },
     );
   }
 
@@ -90,7 +90,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       callback,
       salt,
       expiration,
-      data
+      data,
     );
 
     await loanManager.requestLoan(
@@ -104,7 +104,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       data,
       {
         from: creator,
-      }
+      },
     );
 
     return id;
@@ -125,7 +125,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       [],
       {
         from: accounts[8],
-      }
+      },
     );
 
     await balanceSnap.restore();
@@ -171,7 +171,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       address0x,
       id,
       [],
-      []
+      [],
     );
 
     const ethSnap = await Snap.etherSnap(accounts[5]);
@@ -190,7 +190,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
         from: accounts[5],
         value: estimated,
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
@@ -205,7 +205,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       address0x,
       id,
       [],
-      []
+      [],
     );
 
     const maxSpend = estimated.mul(bn(102)).div(bn(100)); // Send 2% more
@@ -225,7 +225,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
         from: accounts[5],
         value: maxSpend,
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equal(accounts[5]);
@@ -240,7 +240,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       address0x,
       id,
       [],
-      []
+      [],
     );
 
     await destToken.setBalance(accounts[5], estimated);
@@ -260,7 +260,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       {
         from: accounts[5],
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
@@ -275,7 +275,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       address0x,
       id,
       [],
-      []
+      [],
     );
 
     const maxSpend = estimated.mul(bn(102)).div(bn(100)); // Send 2% more
@@ -297,7 +297,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       {
         from: accounts[5],
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
@@ -315,7 +315,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       address0x,
       id,
       oracleData,
-      []
+      [],
     );
 
     const ethSnap = await Snap.etherSnap(accounts[5]);
@@ -334,7 +334,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
         from: accounts[5],
         value: estimated,
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
@@ -352,7 +352,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       address0x,
       id,
       oracleData,
-      []
+      [],
     );
 
     const maxSpend = estimated.mul(bn(102)).div(bn(100)); // Send 2% more
@@ -372,7 +372,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
         from: accounts[5],
         value: maxSpend,
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equal(accounts[5]);
@@ -390,7 +390,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       address0x,
       id,
       oracleData,
-      []
+      [],
     );
 
     await destToken.setBalance(accounts[5], estimated);
@@ -410,7 +410,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       {
         from: accounts[5],
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
@@ -428,7 +428,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       address0x,
       id,
       oracleData,
-      []
+      [],
     );
 
     const maxSpend = estimated.mul(bn(102)).div(bn(100)); // Send 2% more
@@ -450,7 +450,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       {
         from: accounts[5],
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
@@ -464,7 +464,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       ETH_ADDRESS,
       id,
       payAmount,
-      []
+      [],
     );
 
     const ethSnap = await Snap.etherSnap(accounts[5]);
@@ -481,7 +481,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
         from: accounts[5],
         value: estimated,
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await model.getPaid(id)).to.eq.BN(payAmount);
@@ -496,7 +496,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       ETH_ADDRESS,
       id,
       payAmount,
-      []
+      [],
     );
 
     const maxSpend = estimated.mul(bn(102)).div(bn(100)); // Send 2% more
@@ -514,7 +514,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
         from: accounts[5],
         value: maxSpend,
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await model.getPaid(id)).to.eq.BN(payAmount);
@@ -530,7 +530,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       ETH_ADDRESS,
       id,
       payAmount,
-      []
+      [],
     );
 
     const maxSpend = estimated.mul(bn(102)).div(bn(100)); // Send 2% more
@@ -548,7 +548,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
         from: accounts[5],
         value: maxSpend,
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await model.getPaid(id)).to.eq.BN(realPayment);
@@ -563,7 +563,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       destToken.address,
       id,
       payAmount,
-      []
+      [],
     );
 
     const engineSnap = await Snap.balanceSnap(rcnToken, debtEngine.address);
@@ -581,7 +581,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       {
         from: accounts[5],
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await model.getPaid(id)).to.eq.BN(payAmount);
@@ -596,7 +596,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       destToken.address,
       id,
       payAmount,
-      []
+      [],
     );
 
     const maxSpend = estimated.mul(bn(102)).div(bn(100)); // Send 2% more
@@ -615,7 +615,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       {
         from: accounts[5],
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await model.getPaid(id)).to.eq.BN(payAmount);
@@ -631,7 +631,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       destToken.address,
       id,
       payAmount,
-      []
+      [],
     );
 
     const maxSpend = estimated.mul(bn(102)).div(bn(100)); // Send 2% more
@@ -650,7 +650,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       {
         from: accounts[5],
         gasPrice: 0,
-      }
+      },
     );
 
     expect(await model.getPaid(id)).to.eq.BN(realPayment);
