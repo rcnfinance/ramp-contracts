@@ -30,8 +30,16 @@ library SafeMath {
         return x / y;
     }
 
+    function divCeil(uint256 _a, uint256 _b) internal pure returns (uint256 c) {
+        require(_b != 0, "Div by zero");
+        c = _a / _b;
+        if (_a % _b != 0) {
+            c = c + 1;
+        }
+    }
+
     function multdiv(uint256 x, uint256 y, uint256 z) internal pure returns (uint256) {
-        require(z != 0, "div by zero");
+        require(z != 0, "Div by zero");
         return x.mult(y) / z;
     }
 }

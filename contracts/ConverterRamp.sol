@@ -10,7 +10,6 @@ import "./interfaces/ITokenConverter.sol";
 import "./interfaces/rcn/IRateOracle.sol";
 import "./utils/SafeERC20.sol";
 import "./utils/SafeTokenConverter.sol";
-import "./utils/Math.sol";
 
 
 /// @title  Converter Ramp
@@ -21,7 +20,6 @@ contract ConverterRamp is Ownable {
     using SafeTokenConverter for ITokenConverter;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
-    using Math for uint256;
 
     /// @notice address to identify operations with ETH
     address public constant ETH_ADDRESS = address(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
