@@ -1,7 +1,6 @@
 pragma solidity ^0.6.6;
 
 import "truffle/Assert.sol";
-import "truffle/DeployedAddresses.sol";
 
 import "../../contracts/utils/SafeMath.sol";
 
@@ -35,14 +34,8 @@ contract TestSafeMathMock {
 }
 
 
-contract TestSafeMath {
+contract TestSafeMath is TestSafeMathMock {
     using SafeMath for uint256;
-
-    TestSafeMathMock private safeMath;
-
-    constructor() public {
-        safeMath = new TestSafeMathMock();
-    }
 
     function testAdd() external {
         Assert.equal(uint256(0).add(0), 0, "");
@@ -51,9 +44,9 @@ contract TestSafeMath {
         Assert.equal(uint256(1).add(1), 2, "");
 
         // Overflow tests
-        (bool success,) = address(safeMath).call(
+        (bool success,) = address(this).call(
             abi.encodeWithSelector(
-                safeMath.add.selector,
+                this.add.selector,
                 2 ** 255,
                 2 ** 255
             )
@@ -61,9 +54,9 @@ contract TestSafeMath {
 
         Assert.isFalse(success, "Call should fail");
 
-        (success,) = address(safeMath).call(
+        (success,) = address(this).call(
             abi.encodeWithSelector(
-                safeMath.add.selector,
+                this.add.selector,
                 0 - 1,
                 1
             )
@@ -78,9 +71,9 @@ contract TestSafeMath {
         Assert.equal(uint256(1).sub(1), 0, "");
 
         // Underflow tests
-        (bool success,) = address(safeMath).call(
+        (bool success,) = address(this).call(
             abi.encodeWithSelector(
-                safeMath.sub.selector,
+                this.sub.selector,
                 0,
                 1
             )
@@ -97,9 +90,9 @@ contract TestSafeMath {
         Assert.equal(uint256(10).mult(20), 200, "");
 
         // Overflow tests
-        (bool success,) = address(safeMath).call(
+        (bool success,) = address(this).call(
             abi.encodeWithSelector(
-                safeMath.mult.selector,
+                this.mult.selector,
                 0 - 1,
                 0 - 1
             )
@@ -114,9 +107,9 @@ contract TestSafeMath {
         Assert.equal(uint256(10).div(10), 1, "");
 
         // Zero div tests
-        (bool success,) = address(safeMath).call(
+        (bool success,) = address(this).call(
             abi.encodeWithSelector(
-                safeMath.div.selector,
+                this.div.selector,
                 0,
                 0
             )
@@ -131,10 +124,9 @@ contract TestSafeMath {
         Assert.equal(uint256(33).divCeil(3), 11, "");
 
         // Zero div tests
-        (bool success,) = address(safeMath).call(
+        (bool success,) = address(this).call(
             abi.encodeWithSelector(
-                safeMath.divCeil.selector,
-                0,
+                this.divCeil.selector,
                 0,
                 0
             )
@@ -155,9 +147,9 @@ contract TestSafeMath {
         Assert.equal(uint256(32).multdiv(32, 31), 33, "");
 
         // Zero div tests
-        (bool success,) = address(safeMath).call(
+        (bool success,) = address(this).call(
             abi.encodeWithSelector(
-                safeMath.multdiv.selector,
+                this.multdiv.selector,
                 0,
                 0,
                 0
