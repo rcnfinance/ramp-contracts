@@ -1,6 +1,8 @@
 pragma solidity ^0.6.6;
 
 import "../interfaces/IERC20.sol";
+import "../interfaces/rcn/Cosigner.sol";
+import "../interfaces/rcn/RateOracle.sol";
 
 import "../utils/Ownable.sol";
 import "../utils/SafeMath.sol";
@@ -341,63 +343,6 @@ abstract contract Model is IERC165, IDebtStatus {
         @return effect True if the run performed a change on the state
     */
     function run(bytes32 id) external virtual returns (bool effect);
-}
-
-
-/**
-    @dev Defines the interface of a standard Diaspore RCN Oracle,
-
-    The contract should also implement it's ERC165 interface: 0xa265d8e0
-
-    @notice Each oracle can only support one currency
-
-    @author Agustin Aguilar
-*/
-abstract contract RateOracle is IERC165 {
-    uint256 public constant VERSION = 5;
-    bytes4 internal constant RATE_ORACLE_INTERFACE = 0xa265d8e0;
-
-    /**
-        3 or 4 letters symbol of the currency, Ej: ETH
-    */
-    function symbol() external view virtual returns (string memory);
-
-    /**
-        Descriptive name of the currency, Ej: Ethereum
-    */
-    function name() external view virtual returns (string memory);
-
-    /**
-        The number of decimals of the currency represented by this Oracle,
-            it should be the most common number of decimal places
-    */
-    function decimals() external view virtual returns (uint256);
-
-    /**
-        The base token on which the sample is returned
-            should be the RCN Token address.
-    */
-    function token() external view virtual returns (address);
-
-    /**
-        The currency symbol encoded on a UTF-8 Hex
-    */
-    function currency() external view virtual returns (bytes32);
-
-    /**
-        The name of the Individual or Company in charge of this Oracle
-    */
-    function maintainer() external view virtual returns (string memory);
-
-    /**
-        Returns the url where the oracle exposes a valid "oracleData" if needed
-    */
-    function url() external view virtual returns (string memory);
-
-    /**
-        Returns a sample on how many token() are equals to how many currency()
-    */
-    function readSample(bytes calldata _data) external virtual returns (uint256 _tokens, uint256 _equivalent);
 }
 
 
@@ -1846,63 +1791,6 @@ interface LoanCallback {
 }
 
 
-/**
-    @dev Defines the interface of a standard RCN cosigner.
-
-    The cosigner is an agent that gives an insurance to the lender in the event of a defaulted loan, the confitions
-    of the insurance and the cost of the given are defined by the cosigner.
-
-    The lender will decide what cosigner to use, if any; the address of the cosigner and the valid data provided by the
-    agent should be passed as params when the lender calls the "lend" method on the engine.
-
-    When the default conditions defined by the cosigner aligns with the status of the loan, the lender of the engine
-    should be able to call the "claim" method to receive the benefit; the cosigner can define aditional requirements to
-    call this method, like the transfer of the ownership of the loan.
-*/
-interface Cosigner {
-    /**
-        @return the url of the endpoint that exposes the insurance offers.
-    */
-    function url() external view returns (string memory);
-
-    /**
-        @dev Retrieves the cost of a given insurance, this amount should be exact.
-
-        @return the cost of the cosign, in RCN wei
-    */
-    function cost(
-        address engine,
-        uint256 index,
-        bytes calldata data,
-        bytes calldata oracleData
-    )
-        external view returns (uint256);
-
-    /**
-        @dev The engine calls this method for confirmation of the conditions, if the cosigner accepts the liability of
-        the insurance it must call the method "cosign" of the engine. If the cosigner does not call that method, or
-        does not return true to this method, the operation fails.
-
-        @return true if the cosigner accepts the liability
-    */
-    function requestCosign(
-        address engine,
-        uint256 index,
-        bytes calldata data,
-        bytes calldata oracleData
-    )
-        external returns (bool);
-
-    /**
-        @dev Claims the benefit of the insurance if the loan is defaulted, this method should be only calleable by the
-        current lender of the loan.
-
-        @return true if the claim was done correctly.
-    */
-    function claim(address engine, uint256 index, bytes calldata oracleData) external returns (bool);
-}
-
-
 library ImplementsInterface {
     bytes4 constant public InvalidID = 0xffffffff;
     bytes4 constant public ERC165ID = 0x01ffc9a7;
@@ -2137,17 +2025,6 @@ contract BytesUtils {
     }
 
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 contract LoanManager is BytesUtils, IDebtStatus {

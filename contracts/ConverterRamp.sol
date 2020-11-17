@@ -3,11 +3,11 @@ pragma solidity ^0.6.6;
 import "./interfaces/IERC20.sol";
 import "./utils/SafeMath.sol";
 import "./utils/Ownable.sol";
-import "./interfaces/rcn/ICosigner.sol";
+import "./interfaces/rcn/Cosigner.sol";
 import "./interfaces/rcn/IDebtEngine.sol";
 import "./interfaces/rcn/ILoanManager.sol";
 import "./interfaces/ITokenConverter.sol";
-import "./interfaces/rcn/IRateOracle.sol";
+import "./interfaces/rcn/RateOracle.sol";
 import "./utils/SafeERC20.sol";
 import "./utils/SafeTokenConverter.sol";
 
@@ -24,7 +24,7 @@ contract ConverterRamp is Ownable {
     /// @notice address to identify operations with ETH
     address public constant ETH_ADDRESS = address(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
-    event ReadedOracle(IRateOracle _oracle, uint256 _tokens, uint256 _equivalent);
+    event ReadedOracle(RateOracle _oracle, uint256 _tokens, uint256 _equivalent);
 
     IDebtEngine immutable public debtEngine;
     ILoanManager immutable public loanManager;
@@ -54,7 +54,7 @@ contract ConverterRamp is Ownable {
         {
             // Get amount required, in RCN, for payment
             uint256 fee;
-            (amount, fee) = getRequiredRcnPay(_requestId, _payAmount, _oracleData);
+            (amount, fee) = _getRequiredRcnPay(_requestId, _payAmount, _oracleData);
 
             // Pull funds from sender
             _pullConvertAndReturnExtra(
@@ -85,7 +85,7 @@ contract ConverterRamp is Ownable {
         ITokenConverter _converter,
         IERC20 _fromToken,
         uint256 _maxSpend,
-        ICosigner _cosigner,
+        Cosigner _cosigner,
         uint256 _cosignerLimitCost,
         bytes32 _requestId,
         bytes memory _oracleData,
@@ -93,7 +93,7 @@ contract ConverterRamp is Ownable {
         bytes memory _callbackData
     ) public payable {
         // Get required RCN for lending the loan
-        uint256 amount = getRequiredRcnLend(
+        uint256 amount = _getRequiredRcnLend(
             _cosigner,
             _requestId,
             _oracleData,
@@ -123,12 +123,12 @@ contract ConverterRamp is Ownable {
     function getLendCost(
         ITokenConverter _converter,
         IERC20 _fromToken,
-        ICosigner _cosigner,
+        Cosigner _cosigner,
         bytes32 _requestId,
         bytes calldata _oracleData,
         bytes calldata _cosignerData
     ) external returns (uint256) {
-        uint256 amountRcn = getRequiredRcnLend(
+        uint256 amountRcn = _getRequiredRcnLend(
             _cosigner,
             _requestId,
             _oracleData,
@@ -150,7 +150,7 @@ contract ConverterRamp is Ownable {
         uint256 _amount,
         bytes calldata _oracleData
     ) external returns (uint256) {
-        (uint256 amount, uint256 fee) = getRequiredRcnPay(_requestId, _amount, _oracleData);
+        (uint256 amount, uint256 fee) = _getRequiredRcnPay(_requestId, _amount, _oracleData);
 
         return _converter.getPriceConvertTo(
             _fromToken,
@@ -160,8 +160,8 @@ contract ConverterRamp is Ownable {
     }
 
     /// @notice returns how much RCN is required for a given lend
-    function getRequiredRcnLend(
-        ICosigner _lenderCosignerAddress,
+    function _getRequiredRcnLend(
+        Cosigner _cosigner,
         bytes32 _requestId,
         bytes memory _oracleData,
         bytes memory _cosignerData
@@ -170,11 +170,11 @@ contract ConverterRamp is Ownable {
         uint256 amount = loanManager.getAmount(_requestId);
 
         // If loan has a cosigner, sum the cost
-        if (_lenderCosignerAddress != ICosigner(0)) {
+        if (_cosigner != Cosigner(0)) {
             amount = amount.add(
-                _lenderCosignerAddress.cost(
-                    loanManager,
-                    _requestId,
+                _cosigner.cost(
+                    address(loanManager),
+                    uint256(_requestId),
                     _cosignerData,
                     _oracleData
                 )
@@ -182,8 +182,8 @@ contract ConverterRamp is Ownable {
         }
 
         // Convert amount in currency to amount in tokens
-        IRateOracle oracle = loanManager.getOracle(_requestId);
-        if (oracle == IRateOracle(0)) {
+        RateOracle oracle = loanManager.getOracle(_requestId);
+        if (oracle == RateOracle(0)) {
             return amount;
         }
 
@@ -195,7 +195,7 @@ contract ConverterRamp is Ownable {
     }
 
     /// @notice returns how much RCN is required for a given pay
-    function getRequiredRcnPay(
+    function _getRequiredRcnPay(
         bytes32 _requestId,
         uint256 _amount,
         bytes memory _oracleData
@@ -209,8 +209,8 @@ contract ConverterRamp is Ownable {
         }
 
         // Convert amount and fee in currency to amount and fee in tokens
-        IRateOracle oracle = loanManager.getOracle(_requestId);
-        if (oracle == IRateOracle(0)) {
+        RateOracle oracle = loanManager.getOracle(_requestId);
+        if (oracle == RateOracle(0)) {
             return (amount, fee);
         }
 
