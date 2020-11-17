@@ -1,8 +1,8 @@
 pragma solidity ^0.6.6;
 
-import "./../interfaces/ITokenConverter.sol";
-import "./../interfaces/uniswapV2/IUniswapV2Router02.sol";
-import "./../utils/SafeERC20.sol";
+import "../interfaces/ITokenConverter.sol";
+import "../interfaces/uniswapV2/IUniswapV2Router02.sol";
+import "../utils/SafeERC20.sol";
 import "../interfaces/IERC20.sol";
 import "../utils/Ownable.sol";
 

@@ -1,6 +1,6 @@
 pragma solidity ^0.6.6;
 
-import "./IRateOracle.sol";
+import "./RateOracle.sol";
 
 
 interface IDebtEngine {
