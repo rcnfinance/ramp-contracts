@@ -16,6 +16,7 @@ const {
 } = require('./common/helper.js');
 
 const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+const MAX_UINT256 = bn(2).pow(bn(256)).sub(bn(1));
 const MAX_UINT64 = bn(2).pow(bn(64)).sub(bn(1));
 
 contract('ConverterRamp', function (accounts) {
@@ -31,6 +32,20 @@ contract('ConverterRamp', function (accounts) {
   let converterRamp;
   let converter;
   let cosigner;
+
+  async function toFee (amount) {
+    const feePerc = await debtEngine.fee();
+    const BASE = await debtEngine.BASE();
+
+    if (amount.mul(feePerc).mod(BASE).isZero())
+      return amount.mul(feePerc).div(BASE);
+    else
+      return amount.mul(feePerc).div(BASE).add(bn(1));
+  }
+
+  async function withFee (amount) {
+    return amount.add(await toFee(amount));
+  }
 
   async function requestLoan (amount, oracle = address0x) {
     const expiration = MAX_UINT64;
@@ -64,6 +79,28 @@ contract('ConverterRamp', function (accounts) {
       data,
       {
         from: creator,
+      },
+    );
+
+    return id;
+  }
+
+  async function lendLoan (id, oracleData = []) {
+    if (await loanManager.getOracle(id) !== address0x)
+      oracleData = await oracle.encodeRate(toETH(), toETH());
+
+    await rcnToken.setBalance(accounts[8], bn(2).pow(bn(128)));
+    await rcnToken.approve(loanManager.address, MAX_UINT256, { from: accounts[8] });
+
+    await loanManager.lend(
+      id,
+      oracleData,
+      address0x,
+      0,
+      [],
+      [],
+      {
+        from: accounts[8],
       },
     );
 
@@ -150,6 +187,71 @@ contract('ConverterRamp', function (accounts) {
       );
 
       expect(lendCost).to.eq.BN(loanAmount.add(cosignerCost).div(bn(2)));
+    });
+  });
+  describe('Function getPayCostWithFee', () => {
+    it('Loan without lend', async () => {
+      const loanAmount = bn(1000);
+      const id = await requestLoan(loanAmount);
+
+      const payCost = await converterRamp.getPayCostWithFee.call(
+        converter.address, // converter
+        testToken.address, // fromToken
+        id,                // requestId
+        bn(1000),          // amount
+        []                 // oracleData
+      );
+
+      expect(payCost).to.eq.BN(0);
+    });
+    it('Base', async () => {
+      const loanAmount = bn(1000);
+      const amountToPaid = bn(100);
+      const id = await lendLoan(await requestLoan(loanAmount));
+
+      const payCost = await converterRamp.getPayCostWithFee.call(
+        converter.address, // converter
+        testToken.address, // fromToken
+        id, // requestId
+        amountToPaid, // amount
+        [] // oracleData
+      );
+
+      expect(payCost).to.eq.BN(await withFee(amountToPaid));
+    });
+    it('With oracle', async () => {
+      const loanAmount = bn(1000);
+      const amountToPaid = bn(100);
+      const id = await lendLoan(await requestLoan(loanAmount, oracle.address));
+
+      const oracleData = await oracle.encodeRate(toETH(), toETH().mul(bn(2)));
+
+      const payCost = await converterRamp.getPayCostWithFee.call(
+        converter.address, // converter
+        testToken.address, // fromToken
+        id, // requestId
+        amountToPaid, // amount
+        oracleData // oracleData
+      );
+
+      expect(payCost).to.eq.BN((await withFee(amountToPaid.div(bn(2)))));
+    });
+    it('Try pay more', async () => {
+      const loanAmount = bn(1000);
+      const amountToPaid = bn(10000);
+      const id = await lendLoan(await requestLoan(loanAmount, oracle.address));
+
+      const oracleData = await oracle.encodeRate(toETH(), toETH().mul(bn(2)));
+
+      const payCost = await converterRamp.getPayCostWithFee.call(
+        converter.address, // converter
+        testToken.address, // fromToken
+        id, // requestId
+        amountToPaid, // amount
+        oracleData // oracleData
+      );
+
+      expect(payCost).to.eq.BN((await withFee(loanAmount.div(bn(2)))));
     });
   });
 });
