@@ -1,5 +1,6 @@
 pragma solidity ^0.6.6;
 
+import "./DiasporeFlat.sol";
 import "../interfaces/rcn/Cosigner.sol";
 
 
@@ -22,11 +23,14 @@ contract TestCosigner is Cosigner {
     }
 
     function requestCosign(
-        address,
-        uint256,
+        address _loanManager,
+        uint256 _id,
         bytes memory,
         bytes memory
     ) public override returns (bool) {
+        require(LoanManager(_loanManager).cosign(_id, customCost), "requestCosign: loanManager cosign error");
+
+        return true;
     }
 
     function url() public view override returns (string memory) {

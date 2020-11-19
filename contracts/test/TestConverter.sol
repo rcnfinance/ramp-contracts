@@ -9,6 +9,8 @@ import "../interfaces/IERC20.sol";
 contract TestConverter is ITokenConverter{
     using SafeERC20 for IERC20;
 
+    IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
+
     uint256 public customFromAmount;
     uint256 public customToAmount;
 
@@ -18,25 +20,35 @@ contract TestConverter is ITokenConverter{
     }
 
     function convertFrom(
-        IERC20,
+        IERC20 _fromToken,
         IERC20 _toToken,
-        uint256,
+        uint256 _fromAmount,
         uint256
     ) override external payable returns (uint256) {
-        require(_toToken.transfer(msg.sender, customToAmount), "convertFrom: error sending tokens");
+        if (_fromToken != ETH_TOKEN_ADDRESS) {
+            require(_fromToken.transferFrom(msg.sender, address(this), customFromAmount), "convertFrom: error taking tokens");
+        } else {
+            require(msg.value == _fromAmount, "convertFrom: error receive ETH");
+            msg.sender.transfer(_fromAmount - customFromAmount);
+        }
 
-        return customToAmount;
+        require(_toToken.transfer(msg.sender, customToAmount), "convertFrom: error sending tokens");
     }
 
     function convertTo(
         IERC20 _fromToken,
-        IERC20,
+        IERC20 _toToken,
         uint256,
-        uint256
+        uint256 _maxSpend
     ) override external payable returns (uint256) {
-        require(_fromToken.transfer(msg.sender, customFromAmount), "convertTo: error sending tokens");
+        if (_fromToken != ETH_TOKEN_ADDRESS) {
+            require(_fromToken.transferFrom(msg.sender, address(this), customFromAmount), "convertTo: error taking tokens");
+        } else {
+            require(msg.value == _maxSpend, "convertTo: error receive ETH");
+            msg.sender.transfer(_maxSpend - customFromAmount);
+        }
 
-        return customFromAmount;
+        require(_toToken.transfer(msg.sender, customToAmount), "convertTo: error sending tokens");
     }
 
     function getPriceConvertFrom(
@@ -54,4 +66,6 @@ contract TestConverter is ITokenConverter{
     ) override external view returns (uint256) {
         return customFromAmount == 0 ? _toAmount : customFromAmount;
     }
+
+    receive() external payable { }
 }
