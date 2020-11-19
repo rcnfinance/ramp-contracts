@@ -30,7 +30,7 @@ library SafeTokenConverter {
                 _minReceive
             );
         } else {
-            require(_fromToken.safeApprove(address(_converter), _fromAmount), "error approving converter");
+            require(_fromToken.safeApprove(address(_converter), _fromAmount), "safeConvertFrom: error approving converter");
             _converter.convertFrom(
                 _fromToken,
                 _toToken,
@@ -38,11 +38,11 @@ library SafeTokenConverter {
                 _minReceive
             );
 
-            require(_fromToken.clearApprove(address(_converter)), "error clearing approve");
+            require(_fromToken.clearApprove(address(_converter)), "safeConvertFrom: error clearing approve");
         }
 
         _received = _selfBalance(_toToken).sub(prevBalance);
-        require(_received >= _minReceive, "_minReceived not reached");
+        require(_received >= _minReceive, "safeConvertFrom: _minReceived not reached");
     }
 
     function safeConvertTo(
@@ -65,7 +65,7 @@ library SafeTokenConverter {
                 _maxSpend
             );
         } else {
-            require(_fromToken.safeApprove(address(_converter), _maxSpend), "error approving converter");
+            require(_fromToken.safeApprove(address(_converter), _maxSpend), "safeConvertTo: error approving converter");
             _converter.convertTo(
                 _fromToken,
                 _toToken,
@@ -73,12 +73,12 @@ library SafeTokenConverter {
                 _maxSpend
             );
 
-            require(_fromToken.clearApprove(address(_converter)), "error clearing approve");
+            require(_fromToken.clearApprove(address(_converter)), "safeConvertTo: error clearing approve");
         }
 
         _spend = prevFromBalance.sub(_selfBalance(_fromToken));
-        require(_spend <= _maxSpend, "_maxSpend exceeded");
-        require(_selfBalance(_toToken).sub(prevToBalance) >= _toAmount, "_toAmount not received");
+        require(_spend <= _maxSpend, "safeConvertTo: _maxSpend exceeded");
+        require(_selfBalance(_toToken).sub(prevToBalance) >= _toAmount, "safeConvertTo: _toAmount not received");
     }
 
     function _selfBalance(IERC20 _token) private view returns (uint256) {

@@ -33,9 +33,8 @@ module.exports.getBlockTime = async () => {
 };
 
 module.exports.toEvents = async (tx, ...events) => {
-  if (tx instanceof Promise) {
+  if (tx instanceof Promise)
     tx = await tx;
-  }
 
   const logs = tx.logs;
 
@@ -64,11 +63,10 @@ module.exports.tryCatchRevert = async (promise, message, headMsg = 'revert ') =>
   }
 
   try {
-    if (promise instanceof Function) {
+    if (promise instanceof Function)
       await promise();
-    } else {
+    else
       await promise;
-    }
   } catch (error) {
     assert(
       error.message.search(headMsg + message) >= 0 || process.env.SOLIDITY_COVERAGE,

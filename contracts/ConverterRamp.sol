@@ -77,7 +77,7 @@ contract ConverterRamp is Ownable {
                 1
             );
 
-            require(debtEngineToken.safeTransfer(msg.sender, buyBack), "error sending extra");
+            require(debtEngineToken.safeTransfer(msg.sender, buyBack), "pay: error sending extra");
         }
     }
 
@@ -243,10 +243,10 @@ contract ConverterRamp is Ownable {
         uint256 _amount
     ) private {
         if (address(_token) == ETH_ADDRESS) {
-            require(msg.value == _amount, "sent eth is not enought");
+            require(msg.value == _amount, "_pull: sent eth is not enought");
         } else {
-            require(msg.value == 0, "method is not payable");
-            require(_token.safeTransferFrom(msg.sender, address(this), _amount), "error pulling tokens");
+            require(msg.value == 0, "_pull: method is not payable");
+            require(_token.safeTransferFrom(msg.sender, address(this), _amount), "_pull: error pulling tokens");
         }
     }
 
@@ -258,20 +258,20 @@ contract ConverterRamp is Ownable {
         if (address(_token) == ETH_ADDRESS) {
             _to.transfer(_amount);
         } else {
-            require(_token.safeTransfer(_to, _amount), "error sending tokens");
+            require(_token.safeTransfer(_to, _amount), "_transfer: error sending tokens");
         }
     }
 
     function emergencyWithdraw(
         IERC20 _token,
-        address _to,
+        address payable _to,
         uint256 _amount
     ) external onlyOwner {
-        _token.transfer(_to, _amount);
+        _transfer(_token, _to, _amount);
     }
 
     receive() external payable {
         // solhint-disable-next-line
-        require(tx.origin != msg.sender, "ramp: send eth rejected");
+        require(tx.origin != msg.sender, "receive: send eth rejected");
     }
 }
