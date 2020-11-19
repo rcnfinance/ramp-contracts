@@ -701,7 +701,7 @@ contract('ConverterRamp', function (accounts) {
       );
     });
   });
-  describe.only('Function pay', () => {
+  describe('Function pay', () => {
     it('Pay a loan', async () => {
       const id = await lendLoan(await requestLoan(bn(1000)));
 
