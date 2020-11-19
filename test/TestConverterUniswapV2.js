@@ -193,7 +193,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       },
     );
 
-    expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
+    assert.equal(await debtEngine.ownerOf(id), accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan using ETH, sending extra ETH amount', async () => {
@@ -228,7 +228,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       },
     );
 
-    expect(await debtEngine.ownerOf(id)).to.be.equal(accounts[5]);
+    assert.equal(await debtEngine.ownerOf(id), accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan using another token, sending the exact amount', async () => {
@@ -263,7 +263,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       },
     );
 
-    expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
+    assert.equal(await debtEngine.ownerOf(id), accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan using another token, sending extra amount', async () => {
@@ -300,7 +300,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       },
     );
 
-    expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
+    assert.equal(await debtEngine.ownerOf(id), accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan with oracle using ETH, sending the exact amount', async () => {
@@ -337,7 +337,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       },
     );
 
-    expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
+    assert.equal(await debtEngine.ownerOf(id), accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan with oracle using ETH, sending extra ETH amount', async () => {
@@ -372,7 +372,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       },
     );
 
-    expect(await debtEngine.ownerOf(id)).to.be.equal(accounts[5]);
+    assert.equal(await debtEngine.ownerOf(id), accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan with oracle using another token, sending the exact amount', async () => {
@@ -407,7 +407,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       },
     );
 
-    expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
+    assert.equal(await debtEngine.ownerOf(id), accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud lend a loan with oracle using another token, sending extra amount', async () => {
@@ -444,7 +444,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       },
     );
 
-    expect(await debtEngine.ownerOf(id)).to.be.equals(accounts[5]);
+    assert.equal(await debtEngine.ownerOf(id), accounts[5]);
     await ethSnap.requireDecrease(estimated);
   });
   it('Shoud pay a loan using ETH, sending the exact amount', async () => {
