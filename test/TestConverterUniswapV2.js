@@ -342,16 +342,13 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
   });
   it('Shoud lend a loan with oracle using ETH, sending extra ETH amount', async () => {
     const id = await requestLoan(toETH(1001));
-    const tokens = bn(10).pow(bn(18));
-    const equivalent = tokens.div(bn(3));
-    const oracleData = await oracle.encodeRate(tokens, equivalent);
 
     const estimated = await converterRamp.getLendCost.call(
       uniswapV2Converter.address,
       ETH_ADDRESS,
       address0x,
       id,
-      oracleData,
+      [],
       [],
     );
 
@@ -365,7 +362,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       address0x, // Cosigner address
       0, // Cosigner limit cost
       id, // Loan ID
-      oracleData, // Oracle data
+      [], // Oracle data
       [], // Cosigner data
       [], // Callback data
       {
@@ -380,16 +377,13 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
   });
   it('Shoud lend a loan with oracle using another token, sending the exact amount', async () => {
     const id = await requestLoan(toETH(1000));
-    const tokens = bn(10).pow(bn(20));
-    const equivalent = tokens.div(bn(18));
-    const oracleData = await oracle.encodeRate(tokens, equivalent);
 
     const estimated = await converterRamp.getLendCost.call(
       uniswapV2Converter.address,
       destToken.address,
       address0x,
       id,
-      oracleData,
+      [],
       [],
     );
 
@@ -404,7 +398,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       address0x, // Cosigner address
       0, // Cosigner limit cost
       id, // Loan ID
-      oracleData, // Oracle data
+      [], // Oracle data
       [], // Cosigner data
       [], // Callback data
       {
@@ -418,16 +412,13 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
   });
   it('Shoud lend a loan with oracle using another token, sending extra amount', async () => {
     const id = await requestLoan(toETH(1000));
-    const tokens = bn(10).pow(bn(20));
-    const equivalent = tokens.mul(bn(18));
-    const oracleData = await oracle.encodeRate(tokens, equivalent);
 
     const estimated = await converterRamp.getLendCost.call(
       uniswapV2Converter.address,
       destToken.address,
       address0x,
       id,
-      oracleData,
+      [],
       [],
     );
 
@@ -444,7 +435,7 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
       address0x, // Cosigner address
       0, // Cosigner limit cost
       id, // Loan ID
-      oracleData, // Oracle data
+      [], // Oracle data
       [], // Cosigner data
       [], // Callback data
       {
