@@ -4,6 +4,7 @@ const UniswapV2Factory = artifacts.require('UniswapV2Factory');
 const UniswapV2Router = artifacts.require('UniswapV2Router02');
 const UniswapV2Converter = artifacts.require('UniswapV2Converter');
 const ConverterRamp = artifacts.require('ConverterRamp');
+const UniRoute = artifacts.require('UniRoute');
 
 const TestModel = artifacts.require('TestModel');
 const TestDebtEngine = artifacts.require('DebtEngine');
@@ -158,8 +159,13 @@ contract('ConverterRamp with Uniswap V2', function (accounts) {
     await addLiquidityETH(destToken, toETH(40), toETH(20000));
 
     // Deploy converter ramp
-    uniswapV2Converter = await UniswapV2Converter.new(router.address);
+    uniRoute = await UniRoute.new();
+    uniswapV2Converter = await UniswapV2Converter.new(router.address, uniRoute.address);
     converterRamp = await ConverterRamp.new(loanManager.address);
+
+    // Set UniRoutes
+    await uniRoute.setPath(destToken.address, rcnToken.address, [destToken.address, weth.address, rcnToken.address])
+    await uniRoute.setPath(ETH_ADDRESS, rcnToken.address, [weth.address, rcnToken.address])
   });
 
   it('Shoud lend a loan using ETH, sending the exact amount', async () => {
