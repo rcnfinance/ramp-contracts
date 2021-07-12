@@ -4,7 +4,6 @@
     "plugin:promise/recommended"
   ],
   "plugins": [
-    "mocha-no-only",
     "promise"
   ],
   "env": {
@@ -33,6 +32,7 @@
     "no-debugger": "off",
     "no-dupe-args": "error",
     "no-dupe-keys": "error",
+    "no-multi-spaces": ["error", {"ignoreEOLComments":true}],
     "no-mixed-spaces-and-tabs": ["error", "smart-tabs"],
     "no-redeclare": ["error", {"builtinGlobals": true}],
     "no-trailing-spaces": ["error", { "skipBlankLines": false }],
@@ -44,7 +44,6 @@
     "quotes": ["error", "single"],
     "semi": ["error", "always"],
     "space-before-function-paren": ["error", "always"],
-    "mocha-no-only/mocha-no-only": ["error"],
     "promise/always-return": "off",
     "promise/avoid-new": "off"
   }

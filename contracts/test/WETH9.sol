@@ -1,4 +1,4 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.8.0;
 
 
 contract WETH9 {
@@ -14,6 +14,9 @@ contract WETH9 {
     mapping (address => uint)                       public  balanceOf;
     mapping (address => mapping (address => uint))  public  allowance;
 
+    fallback() external payable {
+        deposit();
+    }
     receive() external payable {
         deposit();
     }
@@ -24,7 +27,7 @@ contract WETH9 {
     function withdraw(uint wad) public {
         require(balanceOf[msg.sender] >= wad, "The sender dont have balance");
         balanceOf[msg.sender] -= wad;
-        msg.sender.transfer(wad);
+        payable(msg.sender).transfer(wad);
         emit Withdrawal(msg.sender, wad);
     }
 
@@ -48,7 +51,7 @@ contract WETH9 {
     {
         require(balanceOf[src] >= wad, "The sender dont have balance");
 
-        if (src != msg.sender && allowance[src][msg.sender] != uint(-1)) {
+        if (src != msg.sender && allowance[src][msg.sender] != type(uint256).max) {
             require(allowance[src][msg.sender] >= wad, "The sender dont have allowance");
             allowance[src][msg.sender] -= wad;
         }

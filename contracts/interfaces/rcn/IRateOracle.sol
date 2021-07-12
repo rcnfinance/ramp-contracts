@@ -1,4 +1,4 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.8.0;
 
 
 /// @dev Defines the interface of a standard Diaspore RCN Oracle,

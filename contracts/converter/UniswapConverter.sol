@@ -1,11 +1,11 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.8.0;
 
 import "../interfaces/ITokenConverter.sol";
 import "../interfaces/uniswap/IUniswapFactory.sol";
 import "../interfaces/uniswap/IUniswapExchange.sol";
-import "../utils/SafeERC20.sol";
-import "../interfaces/IERC20.sol";
-import "../utils/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 
 /// @notice proxy between ConverterRamp and Uniswap
@@ -16,14 +16,14 @@ import "../utils/Ownable.sol";
 contract UniswapConverter is ITokenConverter, Ownable {
     using SafeERC20 for IERC20;
 
-    /// @notice address to identify operations with ETH
-    IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
+    /// @dev address to identify operations with ETH
+    IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
     /// @notice registry of ERC20 tokens that have been added to the system
     ///         and the exchange to which they are associated.
     IUniswapFactory immutable public factory;
 
-    constructor (address _uniswapFactory) public {
+    constructor (address _uniswapFactory) {
         factory = IUniswapFactory(_uniswapFactory);
     }
 
@@ -44,7 +44,7 @@ contract UniswapConverter is ITokenConverter, Ownable {
                 value: _fromAmount
             }(
                 1,
-                uint(-1),
+                type(uint256).max,
                 msg.sender
             );
         } else if (_toToken == ETH_TOKEN_ADDRESS) {
@@ -56,7 +56,7 @@ contract UniswapConverter is ITokenConverter, Ownable {
             _received = exchange.tokenToEthTransferInput(
                 _fromAmount,
                 1,
-                uint(-1),
+                type(uint256).max,
                 msg.sender
             );
         } else {
@@ -69,7 +69,7 @@ contract UniswapConverter is ITokenConverter, Ownable {
                 _fromAmount,
                 1,
                 1,
-                uint(-1),
+                type(uint256).max,
                 msg.sender,
                 address(_toToken)
             );
@@ -95,7 +95,7 @@ contract UniswapConverter is ITokenConverter, Ownable {
                 value: _maxSpend
             }(
                 _toAmount,
-                uint(-1),
+                type(uint256).max,
                 msg.sender
             );
         } else if (_toToken == ETH_TOKEN_ADDRESS) {
@@ -107,7 +107,7 @@ contract UniswapConverter is ITokenConverter, Ownable {
             _spent = exchange.tokenToEthTransferOutput(
                 _toAmount,
                 _maxSpend,
-                uint(-1),
+                type(uint256).max,
                 msg.sender
             );
         } else {
@@ -119,8 +119,8 @@ contract UniswapConverter is ITokenConverter, Ownable {
             _spent = exchange.tokenToTokenTransferOutput(
                 _toAmount,
                 _maxSpend,
-                uint(-1),
-                uint(-1),
+                type(uint256).max,
+                type(uint256).max,
                 msg.sender,
                 address(_toToken)
             );
@@ -128,7 +128,7 @@ contract UniswapConverter is ITokenConverter, Ownable {
 
         require(_spent <= _maxSpend, "_maxSpend exceed");
         if (_spent < _maxSpend) {
-            _transfer(_fromToken, msg.sender, _maxSpend - _spent);
+            _transfer(_fromToken, payable(msg.sender), _maxSpend - _spent);
         }
     }
 
@@ -203,13 +203,8 @@ contract UniswapConverter is ITokenConverter, Ownable {
         address _spender,
         uint256 _amount
     ) private {
-        uint256 allowance = _token.allowance(address(this), _spender);
-        if (allowance < _amount) {
-            if (allowance != 0) {
-                _token.clearApprove(_spender);
-            }
-
-            _token.approve(_spender, uint(-1));
+        if (_token.allowance(address(this), _spender) < _amount) {
+            _token.safeIncreaseAllowance(_spender, type(uint256).max);
         }
     }
 

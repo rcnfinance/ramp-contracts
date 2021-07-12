@@ -1,7 +1,7 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.8.0;
 
 import "./IUniswapExchange.sol";
-import "../IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 /// https://docs.uniswap.io/smart-contract-integration/interface

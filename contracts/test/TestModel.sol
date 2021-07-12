@@ -1,4 +1,4 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.8.0;
 
 
 interface IERC173 {
@@ -336,8 +336,8 @@ contract TestModel is BytesUtils, Ownable {
             while (aux / aux != 2) aux++;
             return aux;
         } else if (entry.errorFlag == ERROR_WRITE_STORAGE_STATUS) {
-            entry.lastPing = uint64(now);
-            return uint64(now);
+            entry.lastPing = uint64(block.timestamp);
+            return uint64(block.timestamp);
         }
 
         return entry.paid < entry.total ? STATUS_ONGOING : STATUS_PAID;
@@ -398,14 +398,14 @@ contract TestModel is BytesUtils, Ownable {
         registry[id] = Entry({
             errorFlag: 0,
             dueTime: dueTime,
-            lastPing: uint64(now),
+            lastPing: uint64(block.timestamp),
             total: total,
             paid: 0
         });
 
-        emit ChangedStatus(id, now, STATUS_ONGOING);
-        emit ChangedDueTime(id, now, dueTime);
-        emit ChangedFinalTime(id, now, dueTime);
+        emit ChangedStatus(id, block.timestamp, STATUS_ONGOING);
+        emit ChangedDueTime(id, block.timestamp, dueTime);
+        emit ChangedFinalTime(id, block.timestamp, dueTime);
 
         return true;
     }
@@ -441,7 +441,7 @@ contract TestModel is BytesUtils, Ownable {
 
         emit AddedPaid(id, real);
         if (paid == total) {
-            emit ChangedStatus(id, now, STATUS_PAID);
+            emit ChangedStatus(id, block.timestamp, STATUS_PAID);
         }
     }
 
@@ -459,8 +459,8 @@ contract TestModel is BytesUtils, Ownable {
             entry.total = uint128(total);
 
             emit AddedDebt(id, amount);
-            if (now >= entry.dueTime) {
-                emit ChangedObligation(id, now, total - paid);
+            if (block.timestamp >= entry.dueTime) {
+                emit ChangedObligation(id, block.timestamp, total - paid);
             }
 
             return true;
@@ -483,19 +483,19 @@ contract TestModel is BytesUtils, Ownable {
             return aux == 1;
         }
 
-        if (now != prevPing) {
+        if (block.timestamp != prevPing) {
             uint256 dueTime = entry.dueTime;
 
-            if (now >= dueTime && prevPing < dueTime) {
+            if (block.timestamp >= dueTime && prevPing < dueTime) {
                 emit ChangedObligation(id, dueTime, entry.total);
             }
 
-            entry.lastPing = uint64(now);
+            entry.lastPing = uint64(block.timestamp);
             return true;
         }
     }
 
     function _validate(uint256 due) internal view {
-        require(due > now, "Due time already past");
+        require(due > block.timestamp, "Due time already past");
     }
 }

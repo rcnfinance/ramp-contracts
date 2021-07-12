@@ -1,11 +1,11 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.8.0;
 
-import '../interfaces/IERC20.sol';
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import '../interfaces/rcn/IRateOracle.sol';
 import '../interfaces/rcn/IModel.sol';
 
-import '../utils/SafeMath.sol';
-import '../utils/Ownable.sol';
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 
 library IsContract {
@@ -46,10 +46,10 @@ contract ERC721Base {
     bytes4 private constant ERC_721_METADATA_INTERFACE = 0x5b5e139f;
     bytes4 private constant ERC_721_ENUMERATION_INTERFACE = 0x780e9d63;
 
-    constructor(
+    constructor (
         string memory name,
         string memory symbol
-    ) public {
+    ) {
         _name = name;
         _symbol = symbol;
     }
@@ -93,7 +93,7 @@ contract ERC721Base {
     // ERC721 Enumeration
     // ///
 
-    ///  ERC-721 Non-Fungible Token Standard, optional enumeration extension
+    ///  @dev ERC-721 Non-Fungible Token Standard, optional enumeration extension
     ///  See https://github.com/ethereum/EIPs/blob/master/EIPS/eip-721.md
     ///  Note: the ERC-165 identifier for this interface is 0x780e9d63.
 
@@ -484,6 +484,7 @@ contract ERC721Base {
 }
 
 contract DebtEngine is ERC721Base, Ownable {
+    using SafeMath for uint256;
     using IsContract for address;
 
     event Created(
@@ -573,7 +574,7 @@ contract DebtEngine is ERC721Base, Ownable {
 
     constructor (
         IERC20 _token
-    ) public ERC721Base("RCN Debt Record", "RDR") {
+    ) ERC721Base("RCN Debt Record", "RDR") {
         token = _token;
 
         // Sanity checks
@@ -961,7 +962,7 @@ contract DebtEngine is ERC721Base, Ownable {
         IModel _model,
         uint256 _available
     ) internal returns (uint256) {
-        require(_model != IModel(0), "Debt does not exist");
+        require(_model != IModel(address(0)), "Debt does not exist");
 
         (bool success, bytes32 paid) = _safeGasCall(
             address(_model),
@@ -1025,7 +1026,7 @@ contract DebtEngine is ERC721Base, Ownable {
 
     function run(bytes32 _id) external returns (bool) {
         Debt storage debt = debts[_id];
-        require(debt.model != IModel(0), "Debt does not exist");
+        require(debt.model != IModel(address(0)), "Debt does not exist");
 
         (bool success, bytes32 result) = _safeGasCall(
             address(debt.model),
@@ -1139,7 +1140,7 @@ contract DebtEngine is ERC721Base, Ownable {
         bytes memory returnData;
         uint256 _gas = (block.gaslimit * 80) / 100;
 
-        (success, returnData) = _contract.staticcall.gas(gasleft() < _gas ? gasleft() : _gas)(_data);
+        (success, returnData) = _contract.staticcall{ gas: gasleft() < _gas ? gasleft() : _gas }(_data);
 
         if (returnData.length > 0)
             result = abi.decode(returnData, (uint256));
@@ -1152,7 +1153,7 @@ contract DebtEngine is ERC721Base, Ownable {
         bytes memory returnData;
         uint256 _gas = (block.gaslimit * 80) / 100;
 
-        (success, returnData) = _contract.call.gas(gasleft() < _gas ? gasleft() : _gas)(_data);
+        (success, returnData) = _contract.call{ gas: gasleft() < _gas ? gasleft() : _gas }(_data);
 
         if (returnData.length > 0)
             result = abi.decode(returnData, (bytes32));
@@ -1495,7 +1496,7 @@ contract LoanManager is BytesUtils {
     event SettledLend(bytes32 indexed _id, address _lender, uint256 _tokens);
     event SettledCancel(bytes32 indexed _id, address _canceler);
 
-    constructor(DebtEngine _debtEngine) public {
+    constructor(DebtEngine _debtEngine) {
         debtEngine = _debtEngine;
         token = debtEngine.token();
         require(address(token) != address(0), "Error loading token");
@@ -1793,7 +1794,7 @@ contract LoanManager is BytesUtils {
         Request storage request = requests[_id];
         require(request.open, "Request is no longer open");
         require(request.approved, "The request is not approved by the borrower");
-        require(request.expiration > now, "The request is expired");
+        require(request.expiration > block.timestamp, "The request is expired");
 
         request.open = false;
 
@@ -1824,7 +1825,7 @@ contract LoanManager is BytesUtils {
         // Call the cosigner
         if (_cosigner != address(0)) {
             uint256 auxSalt = request.salt;
-            request.cosigner = address(uint256(_cosigner) + 2);
+            request.cosigner = address(uint160(_cosigner) + 2); // Cant overflow
             request.salt = _cosignerLimit; // Risky ?
             require(
                 Cosigner(_cosigner).requestCosign(
@@ -1842,7 +1843,7 @@ contract LoanManager is BytesUtils {
         // Call the loan callback
         address callback = request.callback;
         if (callback != address(0)) {
-            require(LoanCallback(callback).onLent.gas(GAS_CALLBACK)(_id, msg.sender, _callbackData), "Rejected by loan callback");
+            require(LoanCallback(callback).onLent{ gas: GAS_CALLBACK }(_id, msg.sender, _callbackData), "Rejected by loan callback");
         }
 
         return true;
@@ -1869,8 +1870,8 @@ contract LoanManager is BytesUtils {
     function cosign(uint256 _id, uint256 _cost) external returns (bool) {
         Request storage request = requests[bytes32(_id)];
         require(request.cosigner != address(0), "Cosigner 0x0 is not valid");
-        require(request.expiration > now, "Request is expired");
-        require(request.cosigner == address(uint256(msg.sender) + 2), "Cosigner not valid");
+        require(request.expiration > block.timestamp, "Request is expired");
+        require(request.cosigner == address(uint160(msg.sender) + 2), "Cosigner not valid"); // Cant overflow
         request.cosigner = msg.sender;
         if (_cost != 0){
             require(request.salt >= _cost, "Cosigner cost exceeded");
@@ -1953,7 +1954,7 @@ contract LoanManager is BytesUtils {
         bytes memory _callbackData
     ) public returns (bytes32 id) {
         // Validate request
-        require(uint256(read(_requestData, O_EXPIRATION, L_EXPIRATION)) > now, "Loan request is expired");
+        require(uint256(read(_requestData, O_EXPIRATION, L_EXPIRATION)) > block.timestamp, "Loan request is expired");
 
         // Get id
         uint256 innerSalt;
@@ -1966,7 +1967,7 @@ contract LoanManager is BytesUtils {
         require(
             token.transferFrom(
                 msg.sender,
-                address(uint256(read(_requestData, O_BORROWER, L_BORROWER))),
+                address(uint160(uint256(read(_requestData, O_BORROWER, L_BORROWER)))),
                 tokens
             ),
             "Error sending tokens to borrower"
@@ -1990,11 +1991,11 @@ contract LoanManager is BytesUtils {
             approved: true,
             cosigner: _cosigner,
             amount: uint128(uint256(read(_requestData, O_AMOUNT, L_AMOUNT))),
-            model: address(uint256(read(_requestData, O_MODEL, L_MODEL))),
-            creator: address(uint256(read(_requestData, O_CREATOR, L_CREATOR))),
-            oracle: address(uint256(read(_requestData, O_ORACLE, L_ORACLE))),
-            borrower: address(uint256(read(_requestData, O_BORROWER, L_BORROWER))),
-            callback: address(uint256(read(_requestData, O_CALLBACK, L_CALLBACK))),
+            model: address(uint160(uint256(read(_requestData, O_MODEL, L_MODEL)))),
+            creator: address(uint160(uint256(read(_requestData, O_CREATOR, L_CREATOR)))),
+            oracle: address(uint160(uint256(read(_requestData, O_ORACLE, L_ORACLE)))),
+            borrower: address(uint160(uint256(read(_requestData, O_BORROWER, L_BORROWER)))),
+            callback: address(uint160(uint256(read(_requestData, O_CALLBACK, L_CALLBACK)))),
             salt: _cosigner != address(0) ? _maxCosignerCost : uint256(read(_requestData, O_SALT, L_SALT)),
             loanData: _loanData,
             expiration: uint64(uint256(read(_requestData, O_EXPIRATION, L_EXPIRATION)))
@@ -2007,16 +2008,16 @@ contract LoanManager is BytesUtils {
 
         // Call the cosigner
         if (_cosigner != address(0)) {
-            request.cosigner = address(uint256(_cosigner) + 2);
+            request.cosigner = address(uint160(_cosigner) + 2);
             require(Cosigner(_cosigner).requestCosign(address(this), uint256(id), _cosignerData, _oracleData), "Cosign method returned false");
             require(request.cosigner == _cosigner, "Cosigner didn't callback");
             request.salt = uint256(read(_requestData, O_SALT, L_SALT));
         }
 
         // Call the loan callback
-        address callback = address(uint256(read(_requestData, O_CALLBACK, L_CALLBACK)));
+        address callback = address(uint160(uint256(read(_requestData, O_CALLBACK, L_CALLBACK))));
         if (callback != address(0)) {
-            require(LoanCallback(callback).onLent.gas(GAS_CALLBACK)(id, msg.sender, _callbackData), "Rejected by loan callback");
+            require(LoanCallback(callback).onLent{ gas: GAS_CALLBACK }(id, msg.sender, _callbackData), "Rejected by loan callback");
         }
     }
 
@@ -2026,8 +2027,8 @@ contract LoanManager is BytesUtils {
     ) external returns (bool) {
         (bytes32 id, ) = _buildSettleId(_requestData, _loanData);
         require(
-            msg.sender == address(uint256(read(_requestData, O_BORROWER, L_BORROWER))) ||
-            msg.sender == address(uint256(read(_requestData, O_CREATOR, L_CREATOR))),
+            msg.sender == address(uint160(uint256(read(_requestData, O_BORROWER, L_BORROWER)))) ||
+            msg.sender == address(uint160(uint256(read(_requestData, O_CREATOR, L_CREATOR)))),
             "Only borrower or creator can cancel a settle"
         );
         canceledSettles[id] = true;
@@ -2047,8 +2048,8 @@ contract LoanManager is BytesUtils {
 
         // bytes32 expected = uint256(_id) XOR keccak256("approve-loan-request");
         bytes32 expected = _id ^ 0xdfcb15a077f54a681c23131eacdfd6e12b5e099685b492d382c3fd8bfc1e9a2a;
-        address borrower = address(uint256(read(_requestData, O_BORROWER, L_BORROWER)));
-        address creator = address(uint256(read(_requestData, O_CREATOR, L_CREATOR)));
+        address borrower = address(uint160(uint256(read(_requestData, O_BORROWER, L_BORROWER))));
+        address creator = address(uint160(uint256(read(_requestData, O_CREATOR, L_CREATOR))));
         bytes32 _hash;
 
         if (borrower.isContract()) {
@@ -2103,7 +2104,7 @@ contract LoanManager is BytesUtils {
         bytes memory _oracleData
     ) internal returns (uint256) {
         return _currencyToToken(
-            address(uint256(read(_requestData, O_ORACLE, L_ORACLE))),
+            address(uint160(uint256(read(_requestData, O_ORACLE, L_ORACLE)))),
             uint256(read(_requestData, O_AMOUNT, L_AMOUNT)),
             _oracleData
         );
@@ -2115,9 +2116,9 @@ contract LoanManager is BytesUtils {
         uint256 _innerSalt
     ) internal returns (bytes32) {
         return debtEngine.create2(
-            IModel(address(uint256(read(_requestData, O_MODEL, L_MODEL)))),
+            IModel(address(uint160(uint256(read(_requestData, O_MODEL, L_MODEL))))),
             msg.sender,
-            address(uint256(read(_requestData, O_ORACLE, L_ORACLE))),
+            address(uint160(uint256(read(_requestData, O_ORACLE, L_ORACLE)))),
             _innerSalt,
             _loanData
         );
@@ -2141,7 +2142,7 @@ contract LoanManager is BytesUtils {
             amount,
             borrower,
             creator,
-            address(uint256(read(_requestData, O_CALLBACK, L_CALLBACK))),
+            address(uint160(uint256(read(_requestData, O_CALLBACK, L_CALLBACK)))),
             salt,
             expiration
         );
@@ -2198,12 +2199,12 @@ contract LoanManager is BytesUtils {
         ) = decode(_data, L_AMOUNT, L_MODEL, L_ORACLE, L_BORROWER, L_SALT, L_EXPIRATION);
 
         amount = uint128(uint256(_amount));
-        model = address(uint256(_model));
-        oracle = address(uint256(_oracle));
-        borrower = address(uint256(_borrower));
+        model = address(uint160(uint256(_model)));
+        oracle = address(uint160(uint256(_oracle)));
+        borrower = address(uint160(uint256(_borrower)));
         salt = uint256(_salt);
         expiration = uint64(uint256(_expiration));
-        creator = address(uint256(read(_data, O_CREATOR, L_CREATOR)));
+        creator = address(uint160(uint256(read(_data, O_CREATOR, L_CREATOR))));
     }
 
     function ecrecovery(bytes32 _hash, bytes memory _sig) internal pure returns (address) {

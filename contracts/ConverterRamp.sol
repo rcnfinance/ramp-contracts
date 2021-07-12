@@ -1,15 +1,16 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.8.0;
 
-import "./interfaces/IERC20.sol";
-import "./utils/SafeMath.sol";
-import "./utils/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/rcn/ICosigner.sol";
 import "./interfaces/rcn/IDebtEngine.sol";
 import "./interfaces/rcn/ILoanManager.sol";
 import "./interfaces/ITokenConverter.sol";
 import "./interfaces/rcn/IRateOracle.sol";
-import "./utils/SafeERC20.sol";
+
 import "./utils/SafeTokenConverter.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./utils/Math.sol";
 
 
@@ -188,7 +189,7 @@ contract ConverterRamp is Ownable {
         uint256 amount = loanManager.getAmount(_requestId);
 
         // If loan has a cosigner, sum the cost
-        if (_lenderCosignerAddress != ICosigner(0)) {
+        if (_lenderCosignerAddress != ICosigner(address(0))) {
             amount = amount.add(
                 _lenderCosignerAddress.cost(
                     address(_loanManager),
@@ -266,7 +267,7 @@ contract ConverterRamp is Ownable {
             1
         );
 
-        require(_toToken.safeTransfer(msg.sender, buyBack), "error sending extra");
+        _toToken.safeTransfer(msg.sender, buyBack);
     }
 
     function _pullConvertAndReturnExtra(
@@ -282,7 +283,7 @@ contract ConverterRamp is Ownable {
         uint256 spent = _converter.safeConvertTo(_fromToken, _toToken, _amount, _maxSpend);
 
         if (spent < _maxSpend) {
-            _transfer(_fromToken, msg.sender, _maxSpend - spent);
+            _transfer(_fromToken, payable(msg.sender), _maxSpend - spent);
         }
     }
 
@@ -294,7 +295,7 @@ contract ConverterRamp is Ownable {
             require(msg.value == _amount, "sent eth is not enought");
         } else {
             require(msg.value == 0, "method is not payable");
-            require(_token.safeTransferFrom(msg.sender, address(this), _amount), "error pulling tokens");
+            _token.safeTransferFrom(msg.sender, address(this), _amount);
         }
     }
 
@@ -306,7 +307,7 @@ contract ConverterRamp is Ownable {
         if (address(_token) == ETH_ADDRESS) {
             _to.transfer(_amount);
         } else {
-            require(_token.safeTransfer(_to, _amount), "error sending tokens");
+            _token.safeTransfer(_to, _amount);
         }
     }
 
@@ -315,13 +316,8 @@ contract ConverterRamp is Ownable {
         address _spender,
         uint256 _amount
     ) private {
-        uint256 allowance = _token.allowance(address(this), _spender);
-        if (allowance < _amount) {
-            if (allowance != 0) {
-                _token.clearApprove(_spender);
-            }
-
-            _token.approve(_spender, uint(-1));
+        if (_token.allowance(address(this), _spender) < _amount) {
+            _token.safeIncreaseAllowance(_spender, type(uint256).max);
         }
     }
 

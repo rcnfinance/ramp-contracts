@@ -1,13 +1,14 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.8.0;
 
-import "../interfaces/IERC20.sol";
-import "./SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/ITokenConverter.sol";
-import "./SafeERC20.sol";
+
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 
 library SafeTokenConverter {
-    IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
+    IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -30,7 +31,7 @@ library SafeTokenConverter {
                 _minReceive
             );
         } else {
-            require(_fromToken.safeApprove(address(_converter), _fromAmount), "error approving converter");
+            _fromToken.safeApprove(address(_converter), _fromAmount);
             _converter.convertFrom(
                 _fromToken,
                 _toToken,
@@ -38,7 +39,7 @@ library SafeTokenConverter {
                 _minReceive
             );
 
-            require(_fromToken.clearApprove(address(_converter)), "error clearing approve");
+            _fromToken.safeApprove(address(_converter), 0);
         }
 
         _received = _selfBalance(_toToken).sub(prevBalance);
@@ -65,7 +66,7 @@ library SafeTokenConverter {
                 _maxSpend
             );
         } else {
-            require(_fromToken.safeApprove(address(_converter), _maxSpend), "error approving converter");
+            _fromToken.safeApprove(address(_converter), _maxSpend);
             _converter.convertTo(
                 _fromToken,
                 _toToken,
@@ -73,7 +74,7 @@ library SafeTokenConverter {
                 _maxSpend
             );
 
-            require(_fromToken.clearApprove(address(_converter)), "error clearing approve");
+            _fromToken.safeApprove(address(_converter), 0);
         }
 
         _spend = prevFromBalance.sub(_selfBalance(_fromToken));

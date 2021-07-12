@@ -1,10 +1,10 @@
-pragma solidity ^0.6.6;
+pragma solidity ^0.8.0;
 
 import "./../interfaces/ITokenConverter.sol";
 import "./../interfaces/uniswapV2/IUniswapV2Router02.sol";
-import "./../utils/SafeERC20.sol";
-import "../interfaces/IERC20.sol";
-import "../utils/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 
 /// @notice proxy between ConverterRamp and Uniswap V2
@@ -17,12 +17,12 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
 
     event SetRouter(IUniswapV2Router02 _router);
 
-    /// @notice address to identify operations with ETH
-    IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
+    /// @dev address to identify operations with ETH
+    IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
     IUniswapV2Router02 public router;
 
-    constructor (IUniswapV2Router02 _router) public {
+    constructor (IUniswapV2Router02 _router) {
         router = _router;
     }
 
@@ -52,7 +52,7 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
                 _minReceive,
                 path,
                 msg.sender,
-                uint(-1)
+                type(uint256).max
             );
         } else {
             require(msg.value == 0, "Method is not payable");
@@ -68,7 +68,7 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
                     _minReceive,
                     path,
                     msg.sender,
-                    uint(-1)
+                    type(uint256).max
                 );
             } else {
                 // Convert TOKENA to ETH
@@ -78,7 +78,7 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
                     _minReceive,
                     path,
                     msg.sender,
-                    uint(-1)
+                    type(uint256).max
                 );
             }
         }
@@ -108,7 +108,7 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
                 _toAmount,
                 path,
                 msg.sender,
-                uint(-1)
+                type(uint256).max
             );
         } else {
             require(msg.value == 0, "Method is not payable");
@@ -124,7 +124,7 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
                     _maxSpend,
                     path,
                     msg.sender,
-                    uint(-1)
+                    type(uint256).max
                 );
             } else {
                 // Convert TOKEN to ETH
@@ -134,7 +134,7 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
                     _maxSpend,
                     path,
                     msg.sender,
-                    uint(-1)
+                    type(uint256).max
                 );
             }
         }
@@ -143,7 +143,7 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
 
         require(spent <= _maxSpend, "_maxSpend exceed");
         if (spent < _maxSpend) {
-            _transfer(_fromToken, msg.sender, _maxSpend - spent);
+            _transfer(_fromToken, payable(msg.sender), _maxSpend - spent);
         }
     }
 
@@ -174,13 +174,8 @@ contract UniswapV2Converter is ITokenConverter, Ownable {
         address _spender,
         uint256 _amount
     ) private {
-        uint256 allowance = _token.allowance(address(this), _spender);
-        if (allowance < _amount) {
-            if (allowance != 0) {
-                _token.clearApprove(_spender);
-            }
-
-            _token.approve(_spender, uint(-1));
+        if (_token.allowance(address(this), _spender) < _amount) {
+            _token.safeIncreaseAllowance(_spender, type(uint256).max);
         }
     }
 

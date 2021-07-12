@@ -2,7 +2,8 @@
  *Submitted for verification at Etherscan.io on 2020-05-04
 */
 
-pragma solidity ^0.6.6;
+pragma solidity ^0.8.0;
+
 
 interface IUniswapV2Factory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
@@ -21,8 +22,8 @@ interface IUniswapV2Factory {
 }
 
 interface IUniswapV2Pair {
-    event Approval(address indexed owner, address indexed spender, uint value);
-    event Transfer(address indexed from, address indexed to, uint value);
+    //event Approval(address indexed owner, address indexed spender, uint value);
+    //event Transfer(address indexed from, address indexed to, uint value);
 
     event Mint(address indexed sender, uint amount0, uint amount1);
     event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
@@ -60,8 +61,8 @@ interface IUniswapV2ERC20 {
 }
 
 interface IERC20 {
-    event Approval(address indexed owner, address indexed spender, uint value);
-    event Transfer(address indexed from, address indexed to, uint value);
+    //event Approval(address indexed owner, address indexed spender, uint value);
+    //event Transfer(address indexed from, address indexed to, uint value);
 
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
@@ -94,10 +95,10 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
     bytes32 public override constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
     mapping(address => uint) public override nonces;
 
-    event Approval(address indexed owner, address indexed spender, uint value);
-    event Transfer(address indexed from, address indexed to, uint value);
+    //event Approval(address indexed owner, address indexed spender, uint value);
+    //event Transfer(address indexed from, address indexed to, uint value);
 
-    constructor() public {
+    constructor () {
         uint chainId;
         assembly {
             chainId := chainid()
@@ -147,7 +148,7 @@ contract UniswapV2ERC20 is IUniswapV2ERC20 {
     }
 
     function transferFrom(address from, address to, uint value) external override returns (bool) {
-        if (allowance[from][msg.sender] != uint(-1)) {
+        if (allowance[from][msg.sender] != type(uint256).max) {
             allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
         }
         _transfer(from, to, value);
@@ -207,19 +208,19 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         require(success && (data.length == 0 || abi.decode(data, (bool))), 'UniswapV2: TRANSFER_FAILED');
     }
 
-    event Mint(address indexed sender, uint amount0, uint amount1);
-    event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
-    event Swap(
-        address indexed sender,
-        uint amount0In,
-        uint amount1In,
-        uint amount0Out,
-        uint amount1Out,
-        address indexed to
-    );
-    event Sync(uint112 reserve0, uint112 reserve1);
+    //event Mint(address indexed sender, uint amount0, uint amount1);
+    //event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
+    //event Swap(
+    //    address indexed sender,
+    //    uint amount0In,
+    //    uint amount1In,
+    //    uint amount0Out,
+    //    uint amount1Out,
+    //    address indexed to
+    //);
+    //event Sync(uint112 reserve0, uint112 reserve1);
 
-    constructor() public {
+    constructor () {
         factory = msg.sender;
     }
 
@@ -232,7 +233,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
-        require(balance0 <= uint112(-1) && balance1 <= uint112(-1), 'UniswapV2: OVERFLOW');
+        require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, 'UniswapV2: OVERFLOW');
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
@@ -368,9 +369,9 @@ contract UniswapV2Factory is IUniswapV2Factory {
     mapping(address => mapping(address => address)) public override getPair;
     address[] public override allPairs;
 
-    event PairCreated(address indexed token0, address indexed token1, address pair, uint);
+    // event PairCreated(address indexed token0, address indexed token1, address pair, uint);
 
-    constructor(address _feeToSetter) public {
+    constructor(address _feeToSetter) {
         feeToSetter = _feeToSetter;
     }
 
