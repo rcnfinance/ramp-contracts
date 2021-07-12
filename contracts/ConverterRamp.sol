@@ -8,7 +8,6 @@ import "./interfaces/ITokenConverter.sol";
 import "./interfaces/rcn/IRateOracle.sol";
 
 import "./utils/SafeTokenConverter.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./utils/Math.sol";
@@ -20,7 +19,6 @@ import "./utils/Math.sol";
 /// @dev All function calls are currently implemented without side effects
 contract ConverterRamp is Ownable {
     using SafeTokenConverter for ITokenConverter;
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
     using Math for uint256;
 
@@ -190,13 +188,11 @@ contract ConverterRamp is Ownable {
 
         // If loan has a cosigner, sum the cost
         if (_lenderCosignerAddress != ICosigner(address(0))) {
-            amount = amount.add(
-                _lenderCosignerAddress.cost(
-                    address(_loanManager),
-                    uint256(_requestId),
-                    _cosignerData,
-                    _oracleData
-                )
+            amount = amount + _lenderCosignerAddress.cost(
+                address(_loanManager),
+                uint256(_requestId),
+                _cosignerData,
+                _oracleData
             );
         }
 
@@ -239,7 +235,7 @@ contract ConverterRamp is Ownable {
         (uint256 tokens, uint256 equivalent) = IRateOracle(_oracle).readSample(_oracleData);
 
         emit ReadedOracle(_oracle, tokens, equivalent);
-        return tokens.mul(_amount).divCeil(equivalent);
+        return (tokens * _amount).divCeil(equivalent);
     }
 
     function getPriceConvertTo(

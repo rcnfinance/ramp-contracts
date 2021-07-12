@@ -3,14 +3,12 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/ITokenConverter.sol";
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 
 library SafeTokenConverter {
     IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
 
     function safeConvertFrom(
         ITokenConverter _converter,
@@ -42,7 +40,7 @@ library SafeTokenConverter {
             _fromToken.safeApprove(address(_converter), 0);
         }
 
-        _received = _selfBalance(_toToken).sub(prevBalance);
+        _received = _selfBalance(_toToken) - prevBalance;
         require(_received >= _minReceive, "_minReceived not reached");
     }
 
@@ -77,9 +75,9 @@ library SafeTokenConverter {
             _fromToken.safeApprove(address(_converter), 0);
         }
 
-        _spend = prevFromBalance.sub(_selfBalance(_fromToken));
+        _spend = prevFromBalance - _selfBalance(_fromToken);
         require(_spend <= _maxSpend, "_maxSpend exceeded");
-        require(_selfBalance(_toToken).sub(prevToBalance) >= _toAmount, "_toAmount not received");
+        require(_selfBalance(_toToken) - prevToBalance >= _toAmount, "_toAmount not received");
     }
 
     function _selfBalance(IERC20 _token) private view returns (uint256) {
