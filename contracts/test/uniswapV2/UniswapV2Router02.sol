@@ -690,8 +690,14 @@ library UniswapV2Library {
     }
 
     // calculates the CREATE2 address for a pair without making any external calls
-    function pairFor(address factory, address tokenA, address tokenB) internal view returns (address pair) {
-        return IUniswapV2Factory(factory).getPair(tokenA, tokenB);
+    function pairFor(address factory, address tokenA, address tokenB) internal pure returns (address pair) {
+        (address token0, address token1) = sortTokens(tokenA, tokenB);
+        pair = address(uint160(uint256(keccak256(abi.encodePacked(
+                hex'ff',
+                factory,
+                keccak256(abi.encodePacked(token0, token1)),
+                hex'5d4674b8727f1c3d6aefcf379001e4ee180b1d13a9fefd0b1e6398a92f883a1b' // init code hash
+            )))));
     }
 
     // fetches and sorts the reserves for a pair
