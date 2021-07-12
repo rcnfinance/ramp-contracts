@@ -1,7 +1,36 @@
 const BN = web3.utils.BN;
+
 const expect = require('chai')
   .use(require('bn-chai')(BN))
   .expect;
+
+module.exports.expect = expect;
+
+module.exports.bn = (number) => {
+  return web3.utils.toBN(number);
+};
+
+module.exports.ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+module.exports.MAX_UINT64 = this.bn(2).pow(this.bn(64)).sub(this.bn(1));
+
+module.exports.toETH = (amount = 1) => {
+  return this.bn(web3.utils.toWei(amount.toString()));
+};
+
+module.exports.random32 = () => {
+  return this.bn(web3.utils.randomHex(32));
+};
+
+module.exports.toBytes32 = (source) => {
+  source = web3.utils.toHex(source);
+  const rl = 64;
+  source = source.toString().replace('0x', '');
+  if (source.length < rl) {
+    const diff = 64 - source.length;
+    source = '0'.repeat(diff) + source;
+  }
+  return '0x' + source;
+};
 
 module.exports.balanceSnap = async (token, address, account = '') => {
   const snapBalance = await token.balanceOf(address);
